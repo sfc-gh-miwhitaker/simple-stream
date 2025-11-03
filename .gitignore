@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Secrets (NEVER commit these!)
+*.pem
+*.key
+private_key*
+public_key*
+*.crt
+
+# Internal development notes
+.cursornotes/
+.cursor/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak

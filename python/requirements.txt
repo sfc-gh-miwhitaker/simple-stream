@@ -1,0 +1,30 @@
+# RFID Badge Tracking: Python Dependencies
+# ============================================================================
+# Core dependencies for the RFID badge tracking streaming ingestion system
+# ============================================================================
+
+# Data Models and Validation
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# Snowflake Authentication and API
+PyJWT>=2.8.0
+cryptography>=41.0.0
+requests>=2.31.0
+
+# Date/Time
+python-dateutil>=2.8.2
+
+# Load Testing
+locust>=2.15.0
+
+# Development and Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+isort>=5.12.0
+mypy>=1.5.0
+
+# Documentation
+Markdown>=3.4.4
+
