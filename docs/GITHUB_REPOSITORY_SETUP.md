@@ -27,7 +27,7 @@ Your repository is **already configured correctly** for public read-only access:
 
 ### Step 1: User Adds Repository to Snowflake
 
-Users run a single SQL script to clone your public repository:
+Users open Snowsight Workspaces (Projects → Workspaces → + SQL File) and run a single SQL script to clone your public repository:
 
 ```sql
 -- From: sql/00_git_setup/01_git_repository_setup.sql

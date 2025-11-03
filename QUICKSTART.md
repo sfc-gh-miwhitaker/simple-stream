@@ -22,6 +22,8 @@
 - Role with `CREATE DATABASE` and `CREATE API INTEGRATION` privileges
 - Warehouse (default `COMPUTE_WH` is fine, or create your own)
 
+> **Note on Snowflake UI:** As of September 2025, Snowflake has migrated from "Worksheets" to "Workspaces" (GA). This guide uses the current terminology. Navigation is now: **Projects → Workspaces**.
+
 ---
 
 ## 🚀 Step-by-Step Instructions
@@ -31,7 +33,7 @@
 **No authentication needed!** Since this is a public repository, Snowflake can clone it directly via HTTPS.
 
 1. Open Snowsight UI (your Snowflake account home)
-2. Click **Projects** → **Worksheets** → **+ Worksheet**
+2. Click **Projects** → **Workspaces** → **+ SQL File**
 3. Copy/paste the entire contents of `sql/00_git_setup/01_git_repository_setup.sql`
 4. Click **Run All** (▶▶)
 
@@ -57,7 +59,7 @@
 
 #### 2a. Generate RSA Key Pair (if you don't have one)
 
-**Option A: Use Snowflake Worksheet (Recommended)**
+**Option A: Use Snowflake SQL File (Recommended)**
 ```sql
 -- Generate key pair and register public key
 CALL SYSTEM$GENERATE_RSA_KEYPAIR('RSA_2048');
@@ -82,7 +84,7 @@ openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
 
 #### 2b. Create Snowflake Secrets
 
-1. Open a new worksheet
+1. Open a new SQL file in Workspaces
 2. Copy/paste contents of `sql/00_git_setup/02_configure_secrets.sql`
 3. Update the placeholder values:
    - Line 44: Your account identifier (e.g., `MYORG-ACCOUNT123`)
@@ -114,7 +116,7 @@ CALL SNOWFLAKE_EXAMPLE.GIT_REPOS.DEPLOY_PIPELINE();
 ```
 
 **Option B: Execute SQL Directly**
-1. Open new worksheet
+1. Open new SQL file in Workspaces
 2. Copy/paste contents of `sql/00_git_setup/03_deploy_from_git.sql`
 3. Click **Run All**
 
@@ -229,7 +231,7 @@ No events ingested yet. Run simulator or send test data.
 
 ### Step 5: Explore the Data (<1 min)
 
-In a worksheet, run:
+In a SQL file in Workspaces, run:
 
 ```sql
 -- View transformed events in analytics layer
@@ -330,7 +332,7 @@ DROP DATABASE SNOWFLAKE_EXAMPLE CASCADE;
 ## 🆘 Troubleshooting
 
 ### Issue: "Object does not exist or not authorized"
-**Solution:** Ensure you're using the correct role and warehouse:
+**Solution:** Ensure you're using the correct role and warehouse in your SQL file:
 ```sql
 USE ROLE SYSADMIN;
 USE WAREHOUSE COMPUTE_WH;

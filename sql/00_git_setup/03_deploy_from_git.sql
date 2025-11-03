@@ -27,7 +27,7 @@
  *   - sql/00_git_setup/02_configure_secrets.sql executed
  * 
  * USAGE:
- *   Execute this entire file in a Snowflake worksheet
+ *   Execute this entire file in Snowsight Workspaces (Projects → Workspaces → + SQL File)
  * 
  * ESTIMATED TIME: 2-3 minutes
  ******************************************************************************/

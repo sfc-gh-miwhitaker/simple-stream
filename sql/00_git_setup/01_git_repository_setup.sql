@@ -16,7 +16,7 @@
  *   - Network connectivity to github.com (for HTTPS clone)
  * 
  * USAGE:
- *   1. Open this file in a Snowflake worksheet (Snowsight UI)
+ *   1. Open this file in Snowsight Workspaces (Projects → Workspaces → + SQL File)
  *   2. Execute all statements (no modifications needed!)
  *   3. Verify git repository with: SHOW GIT REPOSITORIES;
  *   4. Proceed to sql/00_git_setup/02_configure_secrets.sql
