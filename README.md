@@ -2,6 +2,8 @@
 
 A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RFID badge tracking as an example. Run the entire demo from your browser with **zero local setup**.
 
+**📦 Repository:** [https://github.com/sfc-gh-miwhitaker/simple-stream](https://github.com/sfc-gh-miwhitaker/simple-stream)
+
 ## 🚀 Get Started in 5 Minutes (Browser Only)
 
 **Zero local setup required!** Run the entire demo from Snowflake Workspaces using Git integration.
@@ -9,6 +11,7 @@ A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RF
 ✅ No Python installation  
 ✅ No Snowflake CLI  
 ✅ No local configuration files  
+✅ No repository forking or authentication needed (public repo = read-only clone)  
 ✅ Credentials stored in Snowflake Secrets  
 ✅ Simulator runs in Snowflake Notebooks  
 
@@ -62,11 +65,12 @@ This project doubles as a **customer-partner playbook** for repeatable RFID vend
 
 ### Snowflake-Native Deployment (Browser Only)
 
-1. **Clone Repository into Snowflake**
+1. **Add Public Repository to Snowflake** (1 min)
    - Open Snowsight → New Worksheet
    - Run `sql/00_git_setup/01_git_repository_setup.sql`
+   - Repository clones as read-only (no authentication needed)
    
-2. **Configure Secrets**
+2. **Configure Secrets** (1 min)
    - Generate RSA key pair (see `config/jwt_keypair_setup.md`)
    - Run `sql/00_git_setup/02_configure_secrets.sql`
    
@@ -169,6 +173,7 @@ Property access control with RFID badges:
 
 | Document | Description |
 |----------|-------------|
+| `docs/GITHUB_REPOSITORY_SETUP.md` | How the public repository supports read-only access |
 | `docs/01-SETUP.md` | Install prerequisites and verify environment |
 | `docs/02-DEPLOYMENT.md` | Deploy Snowflake database, schemas, streams, and tasks |
 | `docs/03-CONFIGURATION.md` | Configure JWT authentication and `.env` settings |
@@ -244,16 +249,41 @@ SELECT * FROM V_PARTITION_EFFICIENCY;
 
 For live dashboards, pin these queries in Snowsight Worksheets or your BI tool of choice and point stakeholders to the quick narrative in [`docs/LAB_GUIDE.md`](docs/LAB_GUIDE.md) (Phase 4) for recommended charts and KPIs.
 
+## Getting Updates
+
+Since you're using a read-only clone of the public repository, you can easily fetch the latest updates:
+
+```sql
+-- Fetch latest changes from GitHub
+USE DATABASE SNOWFLAKE_EXAMPLE;
+USE SCHEMA GIT_REPOS;
+ALTER GIT REPOSITORY simple_stream_repo FETCH;
+
+-- Verify you have the latest files
+SELECT * FROM TABLE(
+  LIST_GIT_REPOSITORY_FILES(
+    repository => 'SNOWFLAKE_EXAMPLE.GIT_REPOS.simple_stream_repo',
+    ref => 'main'
+  )
+)
+ORDER BY file_path;
+```
+
+After fetching updates, you can re-deploy using:
+```sql
+CALL SNOWFLAKE_EXAMPLE.GIT_REPOS.DEPLOY_PIPELINE();
+```
+
 ## Cleanup
 
 To remove all deployed resources:
 
-```bash
-# Complete teardown (drops all objects)
-snowsql -f sql/99_cleanup/teardown_all.sql
+```sql
+-- Complete teardown (drops all objects)
+-- Copy/paste contents of sql/99_cleanup/teardown_all.sql
 
-# Stop tasks only (preserve data)
-snowsql -f sql/99_cleanup/teardown_tasks_only.sql
+-- Stop tasks only (preserve data)
+-- Copy/paste contents of sql/99_cleanup/teardown_tasks_only.sql
 ```
 
 ## Performance Characteristics

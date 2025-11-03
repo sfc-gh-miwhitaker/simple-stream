@@ -26,25 +26,30 @@
 
 ## 🚀 Step-by-Step Instructions
 
-### Step 1: Clone Repository into Snowflake (2 min)
+### Step 1: Add Public Repository to Snowflake (1 min)
+
+**No authentication needed!** Since this is a public repository, Snowflake can clone it directly via HTTPS.
 
 1. Open Snowsight UI (your Snowflake account home)
 2. Click **Projects** → **Worksheets** → **+ Worksheet**
 3. Copy/paste the entire contents of `sql/00_git_setup/01_git_repository_setup.sql`
-4. **IMPORTANT:** Update line 55 with your actual repository URL:
-   ```sql
-   ORIGIN = 'https://github.com/YOUR_ORG/Streaming-Ingest'
-   ```
-5. Click **Run All** (▶▶)
+4. Click **Run All** (▶▶)
+
+**Note:** The repository URL is pre-configured to `https://github.com/sfc-gh-miwhitaker/simple-stream` - no changes needed!
 
 **Expected output:**
 ```
 ✅ API Integration created: GIT_API_INTEGRATION
 ✅ Database created: SNOWFLAKE_EXAMPLE
 ✅ Schema created: GIT_REPOS
-✅ Repository cloned: STREAMING_INGEST_REPO
+✅ Repository cloned: SIMPLE_STREAM_REPO (read-only)
 ✅ Files visible: sql/, python/, notebooks/, README.md, etc.
 ```
+
+**What just happened?**
+- Snowflake cloned the public GitHub repo via HTTPS
+- Repository is **read-only** (you can't push changes, only read files)
+- You can fetch latest updates anytime with: `ALTER GIT REPOSITORY simple_stream_repo FETCH;`
 
 ---
 

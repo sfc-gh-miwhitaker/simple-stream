@@ -5,13 +5,19 @@
  *   Connect this public GitHub repository to Snowflake for native Git integration
  *   Enables running the entire project from Snowsight with zero local setup
  * 
+ * IMPORTANT: This is a PUBLIC repository!
+ *   - No authentication required (Snowflake clones via HTTPS)
+ *   - Read-only access (you cannot push changes back to GitHub)
+ *   - You can fetch latest updates with: ALTER GIT REPOSITORY ... FETCH;
+ *   - Perfect for demos, examples, and reference implementations
+ * 
  * PREREQUISITES:
  *   - Snowflake account with ACCOUNTADMIN or CREATE DATABASE privileges
  *   - Network connectivity to github.com (for HTTPS clone)
  * 
  * USAGE:
  *   1. Open this file in a Snowflake worksheet (Snowsight UI)
- *   2. Execute all statements sequentially
+ *   2. Execute all statements (no modifications needed!)
  *   3. Verify git repository with: SHOW GIT REPOSITORIES;
  *   4. Proceed to sql/00_git_setup/02_configure_secrets.sql
  * 
@@ -43,11 +49,14 @@ CREATE SCHEMA IF NOT EXISTS GIT_REPOS
 USE SCHEMA GIT_REPOS;
 
 -- Create Git repository object pointing to the public GitHub repo
--- This clones the repository into Snowflake and keeps it in sync
+-- Since this is a PUBLIC repository:
+--   - No authentication required (HTTPS clone)
+--   - Read-only access (cannot push changes)
+--   - Can fetch latest updates anytime
 CREATE OR REPLACE GIT REPOSITORY simple_stream_repo
   API_INTEGRATION = git_api_integration
-  ORIGIN = 'https://github.com/YOUR_ORG/simple_stream'  -- TODO: Update with your GitHub org/username
-  COMMENT = 'Simple Stream - Snowflake-native Snowpipe Streaming REST API demo';
+  ORIGIN = 'https://github.com/sfc-gh-miwhitaker/simple-stream'
+  COMMENT = 'Simple Stream - Snowflake-native Snowpipe Streaming REST API demo (public read-only)';
 
 -- Verify repository was created successfully
 SHOW GIT REPOSITORIES IN SCHEMA GIT_REPOS;
