@@ -134,32 +134,10 @@ GRANT USAGE ON SECRET SFE_SS_JWT_KEY TO ROLE SYSADMIN;
 
 SHOW SECRETS IN SCHEMA DEMO_REPO;
 
--- Test that secrets can be retrieved (won't show actual values)
-SELECT 
-    'SFE_SS_ACCOUNT' AS secret_name,
-    CASE 
-        WHEN LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_ACCOUNT')) > 0 
-        THEN '✅ Set (length: ' || LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_ACCOUNT')) || ' chars)'
-        ELSE '❌ Empty or not set'
-    END AS status
-UNION ALL
-SELECT 
-    'SFE_SS_USER' AS secret_name,
-    CASE 
-        WHEN LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_USER')) > 0 
-        THEN '✅ Set (length: ' || LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_USER')) || ' chars)'
-        ELSE '❌ Empty or not set'
-    END AS status
-UNION ALL
-SELECT 
-    'SFE_SS_JWT_KEY' AS secret_name,
-    CASE 
-        WHEN LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_JWT_KEY')) > 1000 
-        THEN '✅ Set (length: ' || LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_JWT_KEY')) || ' chars - looks valid)'
-        WHEN LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_JWT_KEY')) > 0
-        THEN '⚠️  Set but seems too short (' || LENGTH(GET_GENERIC_SECRET_STRING('SFE_SS_JWT_KEY')) || ' chars - check key)'
-        ELSE '❌ Empty or not set'
-    END AS status;
+-- Verify secrets exist (DESC shows metadata without revealing values)
+DESC SECRET SFE_SS_ACCOUNT;
+DESC SECRET SFE_SS_USER;
+DESC SECRET SFE_SS_JWT_KEY;
 
 -- ============================================================================
 -- EXPECTED OUTPUT
@@ -167,17 +145,28 @@ SELECT
 -- 
 -- ✅ Secrets created: SFE_SS_ACCOUNT, SFE_SS_USER, SFE_SS_JWT_KEY
 -- ✅ Permissions granted to SYSADMIN role
--- ✅ All secrets show as "Set" with appropriate lengths
+-- ✅ SHOW SECRETS displays all 3 secrets
+-- ✅ DESC SECRET shows metadata (type, comment, created date)
 -- 
--- ⚠️  If you see "Empty or not set":
---   - Check that you replaced the placeholder values
---   - Ensure SECRET_STRING is enclosed in single quotes
---   - For multi-line keys, all lines must be within the quotes
+-- NOTE: Secret values are never displayed in SQL queries (security feature)
 -- 
--- ⚠️  If JWT key shows "too short":
---   - You may have only pasted part of the key
---   - A valid PKCS#8 2048-bit key is ~1600-1700 characters
---   - Re-paste the complete key including headers/footers
+-- To test if secrets work, you need to:
+-- 1. Run the Jupyter Notebook (notebooks/RFID_Simulator.ipynb)
+-- 2. Cell 2 will attempt to load secrets using _snowflake.get_generic_secret_string()
+-- 3. If secrets load successfully, you'll see account/user displayed
+-- 
+-- ⚠️  Common Issues:
+-- 
+-- If secrets don't work in notebook:
+--   - Verify you replaced ALL placeholder values (YOUR_ACCOUNT_IDENTIFIER, etc.)
+--   - Check SECRET_STRING is enclosed in single quotes
+--   - For multi-line JWT key, all lines must be within the quotes
+--   - JWT key should be ~1600-1700 characters for 2048-bit RSA key
+--   - Ensure you included -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----
+-- 
+-- If you need to update a secret:
+--   - Re-run the CREATE OR REPLACE SECRET command with corrected value
+--   - Secrets are immutable but can be replaced entirely
 -- 
 -- Next step: Run sql/00_git_setup/03_deploy_from_git.sql
 -- ============================================================================

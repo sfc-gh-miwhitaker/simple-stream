@@ -50,8 +50,8 @@ BEGIN
     );
 
     -- Execute each script in order
-    FOR idx IN 0 .. ARRAY_SIZE(files) - 1 DO
-        file_path := files[idx];
+    FOR idx IN 0 TO ARRAY_SIZE(files) - 1 DO
+        file_path := GET(files, idx);
         
         -- Read script from Git repository
         SELECT file_content
@@ -59,16 +59,13 @@ BEGIN
         FROM TABLE(
             READ_GIT_FILE(
                 repository => 'SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo',
-                file_path => file_path,
+                file_path => :file_path,
                 ref => 'main'
             )
         );
 
         -- Execute the script
         EXECUTE IMMEDIATE :script;
-        
-        -- Log progress (visible in query output)
-        SYSTEM$LOG_INFO('Deployed: ' || file_path);
     END FOR;
     
     RETURN 'DEPLOYMENT_COMPLETE';
