@@ -36,13 +36,16 @@
 USE ROLE ACCOUNTADMIN;
 
 -- ============================================================================
--- Create API Integration for GitHub Access
+-- Create API Integration for GitHub Access (Idempotent)
 -- ============================================================================
 -- 
 -- This is the ONLY SQL you need to run. The workspace UI will handle the rest!
+-- 
+-- Uses CREATE IF NOT EXISTS to safely skip if integration already exists.
+-- Safe to run multiple times - won't affect existing Git workspaces.
 --
 
-CREATE OR REPLACE API INTEGRATION SFE_GIT_API_INTEGRATION
+CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
   API_PROVIDER = git_https_api
   API_ALLOWED_PREFIXES = ('https://github.com/')
   ENABLED = TRUE
@@ -58,36 +61,32 @@ SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- API Integration created: SFE_GIT_API_INTEGRATION (enabled = true)
+-- API Integration: SFE_GIT_API_INTEGRATION (enabled = true)
 -- 
 -- ============================================================================
--- NEXT STEP: Create Git Workspace in Snowsight
+-- NEXT STEP: Create Git Workspace in Snowsight UI
 -- ============================================================================
 -- 
--- Now create your persistent Git workspace in the Snowsight UI:
+-- Now create your Git workspace to access all project files:
 -- 
 -- 1. In Snowsight, go to: Projects → Workspaces
--- 
 -- 2. Click: "+ Workspace" → "From Git repository"
--- 
 -- 3. Fill in the form:
 --    - Repository URL:    https://github.com/sfc-gh-miwhitaker/sfe-simple-stream
 --    - Workspace Name:    sfe-simple-stream
---    - API Integration:   SFE_GIT_API_INTEGRATION  (Created by this script)
+--    - API Integration:   SFE_GIT_API_INTEGRATION
 --    - Authentication:    No authentication (public repo)
 --    - Branch:            main
--- 
 -- 4. Click "Create"
 -- 
--- Done! Your workspace will:
---    - Appear in Projects → Workspaces (persists across sessions)
---    - Show all SQL files, notebooks, and docs in the file explorer
---    - Allow you to run scripts directly from the Git repository
+-- This creates both:
+--    - A workspace UI (file explorer, notebooks, SQL editor)
+--    - A Git repository object (Snowflake stage for EXECUTE IMMEDIATE FROM)
 -- 
 -- ============================================================================
 -- AFTER WORKSPACE CREATION: Configure Secrets
 -- ============================================================================
 -- 
--- Next, open and run: sql/00_git_setup/02_configure_secrets.sql
--- (You can find it in your new Git workspace file explorer!)
+-- Open your new workspace and run: sql/00_git_setup/02_configure_secrets.sql
 -- ============================================================================
+

@@ -28,16 +28,17 @@ Before you can connect Git repositories in Snowsight, you need to create an API 
 
 ```sql
 -- Run this once per Snowflake account (requires ACCOUNTADMIN)
+-- Safe to run multiple times - won't affect existing Git workspaces
 USE ROLE ACCOUNTADMIN;
 
-CREATE OR REPLACE API INTEGRATION SFE_GIT_API_INTEGRATION
+CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
   API_PROVIDER = git_https_api
   API_ALLOWED_PREFIXES = ('https://github.com/')
   ENABLED = TRUE
   COMMENT = 'DEMO: GitHub integration for public repository access';
 ```
 
-✅ **Already have `SFE_GIT_API_INTEGRATION`?** Skip to Step 2!
+✅ **Already have `SFE_GIT_API_INTEGRATION`?** Script will skip creation - safe to run anyway!
 
 **Step 2: Create Git Workspace in Snowsight UI** (30 seconds)
 

@@ -36,44 +36,40 @@
 USE ROLE SYSADMIN;
 
 -- ============================================================================
--- Find the Git Repository
+-- STEP 1: Discover Git Repository Location
 -- ============================================================================
 --
--- The workspace created the Git repository in a schema. Let's find it:
-
-SHOW GIT REPOSITORIES LIKE '%sfe_simple_stream%';
-
--- If you see your repository listed, note its database and schema.
--- The repository stage path will be: @DATABASE.SCHEMA.REPOSITORY_NAME
+-- The workspace UI creates the Git repository object somewhere in your account.
+-- Let's find it dynamically so this script works regardless of where it was created.
 --
--- Common locations:
---   - Workspace default: @<your_db>.<your_schema>.sfe_simple_stream_repo
---   - Manual setup: @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo
---
+
+SHOW GIT REPOSITORIES IN ACCOUNT;
+
+-- Capture the Git repo path from the SHOW command above
+SET git_repo_path = (
+    SELECT '@' || "database_name" || '.' || "schema_name" || '.' || "name"
+    FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+    WHERE "origin" LIKE '%sfe-simple-stream%'
+    LIMIT 1
+);
+
+SELECT $git_repo_path AS discovered_git_repository;
 
 -- ============================================================================
--- AUTOMATED DEPLOYMENT: Execute scripts from Git repository
+-- STEP 2: Execute All Setup Scripts from Git Repository
 -- ============================================================================
---
--- WARNING:  EDIT THE @... PATHS BELOW TO MATCH YOUR GIT REPOSITORY LOCATION
---
--- Replace "SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo" with the
--- actual database.schema.repository_name from the SHOW command above.
---
--- If running from the Git workspace, Snowsight should auto-complete these paths!
---
 
 -- Step 1: Core infrastructure (DB, schemas, raw table, pipe, stream)
-EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/01_core_setup.sql;
+EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/01_core_setup.sql';
 
 -- Step 2: Analytics layer (staging, dimensions, facts)
-EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/02_analytics_layer.sql;
+EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/02_analytics_layer.sql';
 
 -- Step 3: Task automation (CDC tasks with auto-resume)
-EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/03_enable_tasks.sql;
+EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/03_enable_tasks.sql';
 
 -- Step 4: Monitoring views
-EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/03_monitoring/monitoring_views.sql;
+EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/03_monitoring/monitoring_views.sql';
 
 -- ============================================================================
 -- VERIFICATION: Confirm deployment succeeded
