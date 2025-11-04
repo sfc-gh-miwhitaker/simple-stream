@@ -166,23 +166,32 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASC...
   COMMENT = 'DEMO: sfe-simple-stream - RSA private key (PKCS#8 format) for JWT token generation';
 
 -- ============================================================================
--- STEP 4: Grant Permissions
+-- STEP 6: Grant Permissions (CRITICAL - Don't Skip!)
+-- ============================================================================
+--
+-- WARNING: This step is REQUIRED! Without these grants, the notebook cannot read secrets.
+--
+
+GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT TO ROLE SYSADMIN;
+GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER TO ROLE SYSADMIN;
+GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 7: Verification
 -- ============================================================================
 
-GRANT USAGE ON SECRET SFE_SS_ACCOUNT TO ROLE SYSADMIN;
-GRANT USAGE ON SECRET SFE_SS_USER TO ROLE SYSADMIN;
-GRANT USAGE ON SECRET SFE_SS_JWT_KEY TO ROLE SYSADMIN;
-
--- ============================================================================
--- VERIFICATION: Confirm secrets were created
--- ============================================================================
-
+-- Verify secrets exist
 SHOW SECRETS IN SCHEMA DEMO_REPO;
 
--- Verify secrets exist (DESC shows metadata without revealing values)
+-- Verify secret metadata (DESC shows metadata without revealing values)
 DESC SECRET SFE_SS_ACCOUNT;
 DESC SECRET SFE_SS_USER;
 DESC SECRET SFE_SS_JWT_KEY;
+
+-- CRITICAL: Verify permissions were granted
+SHOW GRANTS ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY;
+SHOW GRANTS ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT;
+SHOW GRANTS ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER;
 
 -- ============================================================================
 -- EXPECTED OUTPUT
