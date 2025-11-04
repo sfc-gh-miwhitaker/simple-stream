@@ -29,48 +29,31 @@
 
 USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
+USE SCHEMA DEMO_REPO;
+
+-- Verify Git repository exists before deployment
+SHOW GIT REPOSITORIES IN SCHEMA DEMO_REPO;
 
 -- ============================================================================
--- AUTOMATED DEPLOYMENT: Read and execute scripts from Git
+-- AUTOMATED DEPLOYMENT: Execute scripts from Git repository
 -- ============================================================================
+--
+-- Uses EXECUTE IMMEDIATE FROM to run scripts directly from Git repository
+--
 
-EXECUTE IMMEDIATE $$
-DECLARE
-    files ARRAY;
-    idx INTEGER;
-    script STRING;
-    file_path STRING;
-BEGIN
-    -- Define deployment sequence (order matters!)
-    files := ARRAY_CONSTRUCT(
-        'sql/01_setup/01_core_setup.sql',
-        'sql/01_setup/02_analytics_layer.sql',
-        'sql/01_setup/03_enable_tasks.sql',
-        'sql/03_monitoring/monitoring_views.sql'
-    );
+-- Step 1: Core infrastructure (DB, schemas, raw table, pipe, stream)
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/01_core_setup.sql;
 
-    -- Execute each script in order
-    FOR idx IN 0 TO ARRAY_SIZE(files) - 1 DO
-        file_path := GET(files, idx);
-        
-        -- Read script from Git repository
-        SELECT file_content
-        INTO :script
-        FROM TABLE(
-            READ_GIT_FILE(
-                repository => 'SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo',
-                file_path => :file_path,
-                ref => 'main'
-            )
-        );
+-- Step 2: Analytics layer (staging, dimensions, facts)
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/02_analytics_layer.sql;
 
-        -- Execute the script
-        EXECUTE IMMEDIATE :script;
-    END FOR;
-    
-    RETURN 'DEPLOYMENT_COMPLETE';
-END;
-$$;
+-- Step 3: Task automation (CDC tasks with auto-resume)
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/03_enable_tasks.sql;
+
+-- Step 4: Monitoring views
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/03_monitoring/monitoring_views.sql;
+
+SELECT 'DEPLOYMENT_COMPLETE' AS status;
 
 -- ============================================================================
 -- VERIFICATION: Confirm deployment succeeded
