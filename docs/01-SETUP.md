@@ -99,28 +99,45 @@ This project uses Snowflake's **Git Repository** feature to:
 4. Copy/paste the entire contents of `sql/00_git_setup/01_git_repository_setup.sql`
 5. Click **Run All** (▶▶ button)
 
-**Script contents:**
+**What it does:**
 
-The script creates:
-- `SFE_GIT_API_INTEGRATION` - API integration for GitHub HTTPS access
-- `SNOWFLAKE_EXAMPLE` database - Demo project container
-- `DEMO_REPO` schema - Git repository objects
-- `sfe_simple_stream_repo` - Git repository object pointing to this project
+The script creates ONE thing: the API integration for GitHub access.  
+(The workspace UI will create the Git repository object for you!)
 
 **Expected output:**
 
 ```
-✅ API Integration created: SFE_GIT_API_INTEGRATION (enabled)
-✅ Database created: SNOWFLAKE_EXAMPLE
-✅ Schema created: DEMO_REPO
-✅ Git repository created: sfe_simple_stream_repo
-✅ Repository fetched successfully
-✅ Files visible: sql/, notebooks/, examples/, README.md
+✅ API Integration created: SFE_GIT_API_INTEGRATION (enabled = true)
 ```
 
 ---
 
-## Step 3: Verify Repository Access
+## Step 3: Create Git Workspace (Makes it Persistent!)
+
+Now create your workspace in Snowsight - this makes it persist across sessions!
+
+1. In Snowsight, go to: **Projects** → **Workspaces**
+
+2. Click: **"+ Workspace"** → **"From Git repository"**
+
+3. Fill in the form:
+   - **Repository URL**: `https://github.com/sfc-gh-miwhitaker/sfe-simple-stream`
+   - **Workspace Name**: `sfe-simple-stream`
+   - **API Integration**: Select **"SFE_GIT_API_INTEGRATION"** ← Created in Step 2!
+   - **Authentication**: Choose **"No authentication"** (public repo)
+   - **Branch**: Select **"main"**
+
+4. Click **"Create"**
+
+**✅ Done! Your workspace:**
+- Appears in your **Projects → Workspaces** list
+- Shows all SQL files, notebooks, and docs in the file explorer
+- **Persists across browser sessions and logins** (no need to recreate!)
+- Lets you run scripts directly from the repository
+
+---
+
+## Step 4: Verify Repository Access
 
 ### List Repository Files
 
@@ -160,7 +177,7 @@ If you can read the file, Git integration is working! ✅
 
 ---
 
-## Step 4: Verify Key SQL Directories
+## Step 5: Verify Key SQL Directories
 
 ```sql
 -- Verify SQL setup scripts exist
