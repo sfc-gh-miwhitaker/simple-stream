@@ -2,7 +2,8 @@
  * DEMO PROJECT: sfe-simple-stream | Script: Complete Teardown
  * WARNING: DESTRUCTIVE OPERATION - ALL DATA WILL BE PERMANENTLY DELETED
  * PURPOSE: Remove all demo objects while preserving SNOWFLAKE_EXAMPLE database.
- * CLEANUP RULE: Drop schemas, tables, streams, tasks, pipes, secrets, repo, warehouse, API integration.
+ * CLEANUP RULE: Drop schemas, tables, streams, tasks, pipes, secrets, repo, warehouse.
+ * PRESERVED: API Integration (SFE_GIT_API_INTEGRATION) - shared across demo projects
  ******************************************************************************/
 
 -- ============================================================================
@@ -60,20 +61,23 @@ USE ROLE ACCOUNTADMIN;
 DROP SCHEMA IF EXISTS DEMO_REPO CASCADE;
 
 -- ============================================================================
--- STEP 4: Drop Warehouse and API Integration
+-- STEP 4: Drop Warehouse (Keep API Integration for Reuse)
 -- ============================================================================
 -- Account-level objects (already using ACCOUNTADMIN from previous step)
+-- NOTE: API Integration (SFE_GIT_API_INTEGRATION) is intentionally preserved
+--       as it may be shared across multiple demo projects
 
 DROP WAREHOUSE IF EXISTS SFE_SIMPLE_STREAM_WH;
-DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
 
 -- ============================================================================
 -- VERIFICATION (Optional - run to confirm cleanup)
 -- ============================================================================
 
--- Verify no SFE_ prefixed objects remain at account level
-SHOW API INTEGRATIONS LIKE 'SFE_%';
-SHOW WAREHOUSES LIKE 'SFE_%';
+-- Verify API Integration still exists (should be preserved)
+SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
+
+-- Verify warehouse was removed (should return no results)
+SHOW WAREHOUSES LIKE 'SFE_SIMPLE_STREAM%';
 
 -- Verify SNOWFLAKE_EXAMPLE database still exists but demo schemas are gone
 SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
