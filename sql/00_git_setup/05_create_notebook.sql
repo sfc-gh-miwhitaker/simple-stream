@@ -43,7 +43,7 @@ USE SCHEMA DEMO_REPO;
 CREATE OR REPLACE NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR
   FROM '@SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/notebooks/'
   MAIN_FILE = 'RFID_Simulator.ipynb'
-  QUERY_WAREHOUSE = SFE_SIMPLE_STREAM_WH
+  QUERY_WAREHOUSE = COMPUTE_WH
   COMMENT = 'DEMO: sfe-simple-stream - RFID badge event simulator using Snowpipe Streaming REST API';
 
 -- ============================================================================
@@ -58,10 +58,21 @@ ALTER NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR
   ADD LIVE VERSION FROM LAST;
 
 -- ============================================================================
--- STEP 3: Grant Permissions
+-- STEP 3: Associate Secrets with Notebook
 -- ============================================================================
+--
+-- Notebooks access secrets via st.secrets, which requires associating
+-- the secrets with the notebook using ALTER NOTEBOOK SET SECRETS.
+--
 
-GRANT USAGE ON NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR TO ROLE SYSADMIN;
+USE ROLE ACCOUNTADMIN;
+
+ALTER NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR
+  SET SECRETS = (
+    'jwt_key' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY,
+    'account' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT,
+    'user' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER
+  );
 
 -- ============================================================================
 -- VERIFICATION: Confirm Notebook Was Created
