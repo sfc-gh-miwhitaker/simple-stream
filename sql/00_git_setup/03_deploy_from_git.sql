@@ -15,11 +15,17 @@
  *   4. Monitoring views
  * 
  * DEPENDENCIES:
- *   - sql/00_git_setup/01_git_repository_setup.sql (must run first)
- *   - sql/00_git_setup/02_configure_secrets.sql (for simulator credentials)
+ *   - Git workspace created in Snowsight (contains the repository)
+ *   - API integration exists (SFE_GIT_API_INTEGRATION)
+ *   - Optional: secrets configured (only needed if running simulator)
+ * 
+ * ⚠️  IMPORTANT: This script must be run from within your Git workspace!
+ *     The workspace knows where the Git repository is located.
  * 
  * USAGE:
- *   Execute in Snowsight: Projects → Workspaces → + SQL File → Run All
+ *   1. Open your Git workspace in Snowsight (Projects → Workspaces)
+ *   2. Navigate to: sql/00_git_setup/03_deploy_from_git.sql
+ *   3. Click "Run All" (▶▶ button)
  * 
  * CLEANUP:
  *   sql/99_cleanup/teardown_all.sql
@@ -28,21 +34,33 @@
  ******************************************************************************/
 
 USE ROLE SYSADMIN;
-USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA DEMO_REPO;
 
--- Verify Git repository exists before deployment
-SHOW GIT REPOSITORIES IN SCHEMA DEMO_REPO;
+-- ============================================================================
+-- Find the Git Repository
+-- ============================================================================
+--
+-- The workspace created the Git repository in a schema. Let's find it:
 
--- Fetch latest changes from remote Git repository
-ALTER GIT REPOSITORY SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo FETCH;
+SHOW GIT REPOSITORIES LIKE '%sfe_simple_stream%';
+
+-- If you see your repository listed, note its database and schema.
+-- The repository stage path will be: @DATABASE.SCHEMA.REPOSITORY_NAME
+--
+-- Common locations:
+--   - Workspace default: @<your_db>.<your_schema>.sfe_simple_stream_repo
+--   - Manual setup: @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo
+--
 
 -- ============================================================================
 -- AUTOMATED DEPLOYMENT: Execute scripts from Git repository
 -- ============================================================================
 --
--- Uses EXECUTE IMMEDIATE FROM to run scripts directly from Git repository
--- Syntax: EXECUTE IMMEDIATE FROM @repo_name/branches/branch_name/file_path;
+-- ⚠️  EDIT THE @... PATHS BELOW TO MATCH YOUR GIT REPOSITORY LOCATION
+--
+-- Replace "SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo" with the
+-- actual database.schema.repository_name from the SHOW command above.
+--
+-- If running from the Git workspace, Snowsight should auto-complete these paths!
 --
 
 -- Step 1: Core infrastructure (DB, schemas, raw table, pipe, stream)
@@ -56,8 +74,6 @@ EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branc
 
 -- Step 4: Monitoring views
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/03_monitoring/monitoring_views.sql;
-
-SELECT 'DEPLOYMENT_COMPLETE' AS status;
 
 -- ============================================================================
 -- VERIFICATION: Confirm deployment succeeded

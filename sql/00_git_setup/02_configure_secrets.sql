@@ -6,12 +6,20 @@
  * 
  * PURPOSE:
  *   Create Snowflake secrets to securely store JWT authentication credentials
- *   for the RFID simulator and REST API client.
+ *   for the RFID simulator notebook (notebooks/RFID_Simulator.ipynb).
+ * 
+ * ⚠️  ONLY NEEDED IF: You plan to run the simulator notebook!
+ *   
+ *   If you're just deploying the SQL pipeline and monitoring views, you can
+ *   SKIP this script and go directly to sql/00_git_setup/03_deploy_from_git.sql
  * 
  * OBJECTS CREATED:
  *   - Secret: SFE_SS_ACCOUNT (Snowflake account identifier)
  *   - Secret: SFE_SS_USER (Username for JWT authentication)
  *   - Secret: SFE_SS_JWT_KEY (RSA private key in PEM format)
+ * 
+ * USED BY:
+ *   - notebooks/RFID_Simulator.ipynb (reads these secrets for REST API auth)
  * 
  * DEPENDENCIES:
  *   - sql/00_git_setup/01_git_repository_setup.sql (must run first)
@@ -65,8 +73,6 @@ USE SCHEMA DEMO_REPO;
 SELECT 
     CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() AS account_identifier,
     'Copy the value above and paste into SECRET_STRING below' AS instruction;
-
--- Example output: MYORG-ACCOUNT123
 --
 
 -- ============================================================================
@@ -96,8 +102,6 @@ CREATE OR REPLACE SECRET SFE_SS_ACCOUNT
 SELECT 
     CURRENT_USER() AS username,
     'Copy the value above and paste into SECRET_STRING below' AS instruction;
-
--- Example output: JSMITH
 --
 
 -- ============================================================================
@@ -200,5 +204,21 @@ DESC SECRET SFE_SS_JWT_KEY;
 --   - Re-run the CREATE OR REPLACE SECRET command with corrected value
 --   - Secrets are immutable but can be replaced entirely
 -- 
--- Next step: Run sql/00_git_setup/03_deploy_from_git.sql
+-- ============================================================================
+-- NEXT STEPS
+-- ============================================================================
+-- 
+-- ✅ Secrets configured! Now you can:
+-- 
+-- 1. Deploy the SQL pipeline:
+--    → Run: sql/00_git_setup/03_deploy_from_git.sql
+-- 
+-- 2. Run the RFID Simulator notebook:
+--    → Open: notebooks/RFID_Simulator.ipynb (in your Git workspace)
+--    → The notebook will use these secrets for JWT authentication
+--    → Sends simulated badge events via Snowpipe Streaming REST API
+-- 
+-- ⚠️  Remember: These secrets are ONLY needed for the simulator notebook!
+--     The SQL pipeline deployment (step 1) does not require them.
+-- 
 -- ============================================================================
