@@ -9,13 +9,17 @@
  *   performance, and data quality across the pipeline.
  * 
  * VIEWS CREATED:
- *   1. V_CHANNEL_STATUS: Real-time channel health
+ *   1. V_CHANNEL_STATUS: Channel health (FILE_MIGRATION_HISTORY)
  *   2. V_INGESTION_METRICS: Throughput and volume metrics
  *   3. V_END_TO_END_LATENCY: Pipeline latency tracking
  *   4. V_DATA_FRESHNESS: Last event timestamps
- *   5. V_PARTITION_EFFICIENCY: Query performance metrics
- *   6. V_STREAMING_COSTS: Cost tracking
- *   7. V_TASK_EXECUTION_HISTORY: Task performance
+ *   5. V_PARTITION_EFFICIENCY: Query performance metrics (QUERY_HISTORY)
+ *   6. V_STREAMING_COSTS: Cost tracking with actual credits (FILE_MIGRATION_HISTORY)
+ *   7. V_TASK_EXECUTION_HISTORY: Task performance (TASK_HISTORY)
+ * 
+ * ⚠️  NOTE: ACCOUNT_USAGE views have latency (up to 120 minutes).
+ *     V_CHANNEL_STATUS and V_STREAMING_COSTS use FILE_MIGRATION_HISTORY.
+ *     For real-time event monitoring, query RAW_BADGE_EVENTS directly.
  * 
  * CLEANUP:
  *   See sql/99_cleanup/teardown_all.sql for complete removal
@@ -28,31 +32,31 @@ USE SCHEMA RAW_INGESTION;
 -- View 1: Channel Status
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_CHANNEL_STATUS AS
+CREATE OR REPLACE VIEW V_CHANNEL_STATUS
+COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming channel health (uses FILE_MIGRATION_HISTORY)'
+AS
 SELECT 
-    channel_name,
-    pipe_name,
-    MAX(server_timestamp) AS last_ingestion_time,
-    DATEDIFF('second', MAX(server_timestamp), CURRENT_TIMESTAMP()) AS seconds_since_last_ingestion,
-    SUM(rows_inserted) AS total_rows_inserted,
-    SUM(bytes_inserted) / POWER(1024, 3) AS total_gb_inserted,
-    COUNT(DISTINCT DATE_TRUNC('minute', server_timestamp)) AS active_minutes_last_hour,
-    AVG(rows_inserted) AS avg_rows_per_insert,
-    MAX(rows_inserted) AS max_rows_per_insert
-FROM TABLE(
-    SNOWFLAKE.INFORMATION_SCHEMA.CHANNEL_HISTORY(
-        PIPE_NAME => 'SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe',
-        TIME_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP())
-    )
-)
-GROUP BY channel_name, pipe_name
-COMMENT = 'DEMO: sfe-simple-stream - Real-time Snowpipe Streaming channel health';
+    table_name AS pipe_name,
+    MAX(end_time) AS last_ingestion_time,
+    DATEDIFF('second', MAX(end_time), CURRENT_TIMESTAMP()) AS seconds_since_last_ingestion,
+    SUM(num_rows_migrated) AS total_rows_inserted,
+    SUM(num_bytes_migrated) / POWER(1024, 3) AS total_gb_inserted,
+    COUNT(DISTINCT DATE_TRUNC('minute', end_time)) AS active_minutes_last_hour,
+    AVG(num_rows_migrated) AS avg_rows_per_insert,
+    MAX(num_rows_migrated) AS max_rows_per_insert,
+    SUM(credits_used) AS total_credits_used
+FROM SNOWFLAKE.ACCOUNT_USAGE.SNOWPIPE_STREAMING_FILE_MIGRATION_HISTORY
+WHERE table_name = 'RAW_BADGE_EVENTS'
+    AND end_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())
+GROUP BY table_name;
 
 -- ============================================================================
 -- View 2: Ingestion Metrics
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_INGESTION_METRICS AS
+CREATE OR REPLACE VIEW V_INGESTION_METRICS
+COMMENT = 'DEMO: sfe-simple-stream - Hourly ingestion metrics for the last 24 hours'
+AS
 WITH hourly_stats AS (
     SELECT 
         DATE_TRUNC('hour', ingestion_time) AS ingestion_hour,
@@ -80,14 +84,15 @@ SELECT
     exit_count,
     entry_count - exit_count AS net_occupancy_change
 FROM hourly_stats
-ORDER BY ingestion_hour DESC
-COMMENT = 'DEMO: sfe-simple-stream - Hourly ingestion metrics for the last 24 hours';
+ORDER BY ingestion_hour DESC;
 
 -- ============================================================================
 -- View 3: End-to-End Latency
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_END_TO_END_LATENCY AS
+CREATE OR REPLACE VIEW V_END_TO_END_LATENCY
+COMMENT = 'DEMO: sfe-simple-stream - End-to-end pipeline latency and health status'
+AS
 WITH latest_events AS (
     SELECT 
         'RAW' AS layer,
@@ -130,14 +135,15 @@ ORDER BY
         WHEN 'RAW' THEN 1
         WHEN 'STAGING' THEN 2
         WHEN 'ANALYTICS' THEN 3
-    END
-COMMENT = 'DEMO: sfe-simple-stream - End-to-end pipeline latency and health status';
+    END;
 
 -- ============================================================================
 -- View 4: Data Freshness
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_DATA_FRESHNESS AS
+CREATE OR REPLACE VIEW V_DATA_FRESHNESS
+COMMENT = 'DEMO: sfe-simple-stream - Data freshness metrics across all layers'
+AS
 SELECT 
     'RAW_BADGE_EVENTS' AS table_name,
     MAX(event_timestamp) AS last_event_timestamp,
@@ -145,7 +151,7 @@ SELECT
     DATEDIFF('second', MAX(event_timestamp), CURRENT_TIMESTAMP()) AS event_age_seconds,
     DATEDIFF('second', MAX(ingestion_time), CURRENT_TIMESTAMP()) AS ingestion_age_seconds,
     COUNT(*) AS total_rows,
-    COUNT(*) FILTER (WHERE ingestion_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())) AS rows_last_hour
+    SUM(CASE WHEN ingestion_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP()) THEN 1 ELSE 0 END) AS rows_last_hour
 FROM RAW_BADGE_EVENTS
 
 UNION ALL
@@ -157,78 +163,67 @@ SELECT
     DATEDIFF('second', MAX(event_timestamp), CURRENT_TIMESTAMP()) AS event_age_seconds,
     DATEDIFF('second', MAX(fact_load_time), CURRENT_TIMESTAMP()) AS ingestion_age_seconds,
     COUNT(*) AS total_rows,
-    COUNT(*) FILTER (WHERE fact_load_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())) AS rows_last_hour
-FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
-COMMENT = 'DEMO: sfe-simple-stream - Data freshness metrics across all layers';
+    SUM(CASE WHEN fact_load_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP()) THEN 1 ELSE 0 END) AS rows_last_hour
+FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS;
 
 -- ============================================================================
 -- View 5: Partition Efficiency
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_PARTITION_EFFICIENCY AS
-WITH table_scan_stats AS (
-    SELECT 
-        table_name,
-        query_id,
-        partitions_scanned,
-        partitions_total,
-        ROUND(100.0 * partitions_scanned / NULLIF(partitions_total, 0), 2) AS scan_ratio_pct,
-        bytes_scanned / POWER(1024, 3) AS gb_scanned
-    FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
-    WHERE table_name IN ('RAW_BADGE_EVENTS', 'FCT_ACCESS_EVENTS')
-        AND start_time >= DATEADD('day', -1, CURRENT_TIMESTAMP())
-        AND partitions_total > 0
-)
+CREATE OR REPLACE VIEW V_PARTITION_EFFICIENCY
+COMMENT = 'DEMO: sfe-simple-stream - Query pruning efficiency - uses TABLE_QUERY_PRUNING_HISTORY'
+AS
 SELECT 
     table_name,
-    COUNT(*) AS query_count,
-    ROUND(AVG(scan_ratio_pct), 2) AS avg_scan_ratio_pct,
-    ROUND(MIN(scan_ratio_pct), 2) AS best_scan_ratio_pct,
-    ROUND(MAX(scan_ratio_pct), 2) AS worst_scan_ratio_pct,
-    ROUND(AVG(gb_scanned), 2) AS avg_gb_scanned,
+    SUM(num_queries) AS query_count,
+    ROUND(100.0 * SUM(partitions_scanned) / NULLIF(SUM(partitions_scanned + partitions_pruned), 0), 2) AS avg_scan_ratio_pct,
+    ROUND(SUM(rows_scanned) / POWER(1024, 3), 2) AS total_gb_scanned_approx,
+    ROUND(100.0 * SUM(rows_pruned) / NULLIF(SUM(rows_scanned + rows_pruned), 0), 2) AS row_prune_ratio_pct,
     CASE 
-        WHEN AVG(scan_ratio_pct) < 20 THEN 'EXCELLENT'
-        WHEN AVG(scan_ratio_pct) < 50 THEN 'GOOD'
-        WHEN AVG(scan_ratio_pct) < 80 THEN 'FAIR'
+        WHEN 100.0 * SUM(partitions_scanned) / NULLIF(SUM(partitions_scanned + partitions_pruned), 0) < 20 THEN 'EXCELLENT'
+        WHEN 100.0 * SUM(partitions_scanned) / NULLIF(SUM(partitions_scanned + partitions_pruned), 0) < 50 THEN 'GOOD'
+        WHEN 100.0 * SUM(partitions_scanned) / NULLIF(SUM(partitions_scanned + partitions_pruned), 0) < 80 THEN 'FAIR'
         ELSE 'POOR'
     END AS pruning_efficiency
-FROM table_scan_stats
-GROUP BY table_name
-COMMENT = 'DEMO: sfe-simple-stream - Query pruning efficiency - lower scan ratio is better';
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_QUERY_PRUNING_HISTORY
+WHERE table_name IN ('RAW_BADGE_EVENTS', 'FCT_ACCESS_EVENTS')
+    AND interval_start_time >= DATEADD('day', -1, CURRENT_TIMESTAMP())
+GROUP BY table_name;
 
 -- ============================================================================
 -- View 6: Streaming Costs (Throughput-Based Pricing)
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_STREAMING_COSTS AS
+CREATE OR REPLACE VIEW V_STREAMING_COSTS
+COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming cost tracking from FILE_MIGRATION_HISTORY'
+AS
 WITH daily_throughput AS (
     SELECT 
-        DATE(server_timestamp) AS ingestion_date,
-        SUM(bytes_inserted) / POWER(1024, 3) AS gb_ingested_uncompressed,
-        SUM(rows_inserted) AS rows_ingested
-    FROM TABLE(
-        SNOWFLAKE.INFORMATION_SCHEMA.CHANNEL_HISTORY(
-            PIPE_NAME => 'SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe',
-            TIME_RANGE_START => DATEADD('day', -30, CURRENT_TIMESTAMP())
-        )
-    )
-    GROUP BY DATE(server_timestamp)
+        DATE(end_time) AS ingestion_date,
+        SUM(num_bytes_migrated) / POWER(1024, 3) AS gb_ingested,
+        SUM(num_rows_migrated) AS rows_ingested,
+        SUM(credits_used) AS actual_credits_used
+    FROM SNOWFLAKE.ACCOUNT_USAGE.SNOWPIPE_STREAMING_FILE_MIGRATION_HISTORY
+    WHERE table_name = 'RAW_BADGE_EVENTS'
+        AND end_time >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+    GROUP BY DATE(end_time)
 )
 SELECT 
     ingestion_date,
-    gb_ingested_uncompressed,
+    gb_ingested,
     rows_ingested,
-    gb_ingested_uncompressed * 0.01 AS estimated_credits_snowpipe_streaming,
-    ROUND(rows_ingested / NULLIF(gb_ingested_uncompressed, 0), 0) AS rows_per_gb
+    actual_credits_used,
+    ROUND(rows_ingested / NULLIF(gb_ingested, 0), 0) AS rows_per_gb
 FROM daily_throughput
-ORDER BY ingestion_date DESC
-COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming cost tracking (est. $0.01 per GB uncompressed)';
+ORDER BY ingestion_date DESC;
 
 -- ============================================================================
 -- View 7: Task Execution History
 -- ============================================================================
 
-CREATE OR REPLACE VIEW V_TASK_EXECUTION_HISTORY AS
+CREATE OR REPLACE VIEW V_TASK_EXECUTION_HISTORY
+COMMENT = 'DEMO: sfe-simple-stream - Task execution history for the last 24 hours'
+AS
 SELECT 
     name AS task_name,
     state,
@@ -250,8 +245,7 @@ FROM TABLE(
     )
 )
 WHERE database_name = 'SNOWFLAKE_EXAMPLE'
-ORDER BY scheduled_time DESC
-COMMENT = 'DEMO: sfe-simple-stream - Task execution history for the last 24 hours';
+ORDER BY scheduled_time DESC;
 
 -- ============================================================================
 -- Verify view creation
@@ -279,7 +273,7 @@ SHOW VIEWS LIKE 'V_%' IN SCHEMA RAW_INGESTION;
 --   SELECT * FROM V_PARTITION_EFFICIENCY;
 -- 
 -- Track costs:
---   SELECT SUM(estimated_credits_snowpipe_streaming) AS total_credits_last_30_days
+--   SELECT SUM(actual_credits_used) AS total_credits_last_30_days
 --   FROM V_STREAMING_COSTS;
 -- 
 -- Review task performance:
