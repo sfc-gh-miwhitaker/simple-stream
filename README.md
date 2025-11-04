@@ -300,13 +300,7 @@ USE SCHEMA DEMO_REPO;
 ALTER GIT REPOSITORY sfe_simple_stream_repo FETCH;
 
 -- Verify you have the latest files
-SELECT * FROM TABLE(
-  LIST_GIT_REPOSITORY_FILES(
-    repository => 'SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo',
-    ref => 'main'
-  )
-)
-ORDER BY file_path;
+LIST @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main;
 ```
 
 After fetching updates, you can re-deploy using:

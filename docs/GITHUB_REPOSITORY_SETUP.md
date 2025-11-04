@@ -138,13 +138,12 @@ CREATE OR REPLACE GIT REPOSITORY simple_stream_repo
   ORIGIN = 'https://github.com/sfc-gh-miwhitaker/simple-stream'
   GIT_CREDENTIALS = git_creds;  -- Only needed for private repos
 
--- Read files from a specific branch/tag
-SELECT * FROM TABLE(
-  LIST_GIT_REPOSITORY_FILES(
-    repository => 'simple_stream_repo',
-    ref => 'v1.0'  -- Can be branch name or tag
-  )
-);
+-- Read files from a specific branch/tag/commit
+LIST @simple_stream_repo/branches/main;
+-- or
+LIST @simple_stream_repo/tags/v1.0;
+-- or
+LIST @simple_stream_repo/commits/abc123;
 ```
 
 **Best Practice:**

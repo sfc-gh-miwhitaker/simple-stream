@@ -82,14 +82,8 @@ SHOW GIT REPOSITORIES IN SCHEMA DEMO_REPO;
 ALTER GIT REPOSITORY sfe_simple_stream_repo FETCH;
 
 -- List files in the repository to verify clone succeeded
-SELECT * FROM TABLE(
-  LIST_GIT_REPOSITORY_FILES(
-    repository => 'SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo',
-    ref => 'main'
-  )
-)
-ORDER BY file_path
-LIMIT 20;
+-- Using the LIST command (can also use LS shorthand)
+LIST @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main;
 
 /*******************************************************************************
  * SUCCESS CHECKPOINT

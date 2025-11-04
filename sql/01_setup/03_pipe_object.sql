@@ -29,6 +29,7 @@ USE SCHEMA RAW_INGESTION;
 -- Create PIPE with in-flight transformations
 -- sfe_ prefix prevents collision with production pipes
 CREATE OR REPLACE PIPE sfe_badge_events_pipe
+  COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming REST API endpoint for badge events'
 AS COPY INTO RAW_BADGE_EVENTS
 FROM (
   SELECT 
@@ -61,8 +62,7 @@ FROM (
     $1 as raw_json
     
   FROM TABLE(DATA_SOURCE(TYPE => 'STREAMING'))
-)
-COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming REST API endpoint for badge events';
+);
 
 -- Verify PIPE creation
 SHOW PIPES LIKE 'sfe_%' IN SCHEMA RAW_INGESTION;
