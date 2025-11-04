@@ -1,44 +1,13 @@
 /*******************************************************************************
- * DEMO PROJECT: sfe-simple-stream
- * Script: Analytics Layer Setup
- * 
- * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
- * 
- * PURPOSE:
- *   Provision staging and analytics layer tables for badge event processing:
- *   - Staging table for deduplication
- *   - Dimension tables (Users, Zones, Readers) with seed data
- *   - Fact table for access events (clustered by date)
- * 
- * OBJECTS CREATED:
- *   - Staging: STG_BADGE_EVENTS (transient)
- *   - Dimensions: DIM_USERS, DIM_ZONES, DIM_READERS
- *   - Fact: FCT_ACCESS_EVENTS (clustered)
- * 
- * DEPENDENCIES:
- *   - sql/01_setup/01_core_setup.sql (must run first)
- * 
- * USAGE:
- *   Execute in Snowsight: Projects → Workspaces → + SQL File → Run All
- * 
- * CLEANUP:
- *   sql/99_cleanup/teardown_all.sql
- * 
- * ESTIMATED TIME: 15 seconds
+ * Analytics Layer
+ * Creates: Staging table, dimensions (users, zones, readers), fact table
+ * Time: 15 seconds
  ******************************************************************************/
-
--- ============================================================================
--- PREREQUISITE: Core setup must be complete
--- ============================================================================
--- Run sql/01_setup/01_core_setup.sql first
 
 USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
--- ============================================================================
--- STEP 1: Create Staging Table
--- ============================================================================
-
+-- Staging table (transient for cost savings)
 USE SCHEMA STAGING_LAYER;
 
 CREATE OR REPLACE TRANSIENT TABLE STG_BADGE_EVENTS (
@@ -54,16 +23,12 @@ CREATE OR REPLACE TRANSIENT TABLE STG_BADGE_EVENTS (
     staging_time TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     CONSTRAINT pk_stg_badge_events PRIMARY KEY (badge_id, event_timestamp)
 )
-COMMENT = 'DEMO: sfe-simple-stream - Staging table for deduplicated badge events'
+COMMENT = 'DEMO: Deduplicated staging table'
 DATA_RETENTION_TIME_IN_DAYS = 1;
 
--- ============================================================================
--- STEP 2: Create Dimension Tables
--- ============================================================================
-
+-- Dimension tables
 USE SCHEMA ANALYTICS_LAYER;
 
--- Dimension: Users (Type 2 SCD)
 CREATE OR REPLACE TABLE DIM_USERS (
     user_key NUMBER AUTOINCREMENT PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
@@ -80,9 +45,8 @@ CREATE OR REPLACE TABLE DIM_USERS (
     created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'DEMO: sfe-simple-stream - User dimension with Type 2 SCD';
+COMMENT = 'DEMO: User dimension (Type 2 SCD)';
 
--- Dimension: Zones
 CREATE OR REPLACE TABLE DIM_ZONES (
     zone_key NUMBER AUTOINCREMENT PRIMARY KEY,
     zone_id VARCHAR(50) NOT NULL UNIQUE,
@@ -102,9 +66,8 @@ CREATE OR REPLACE TABLE DIM_ZONES (
     created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'DEMO: sfe-simple-stream - Zone dimension for badge analytics';
+COMMENT = 'DEMO: Zone dimension';
 
--- Dimension: Readers
 CREATE OR REPLACE TABLE DIM_READERS (
     reader_key NUMBER AUTOINCREMENT PRIMARY KEY,
     reader_id VARCHAR(50) NOT NULL UNIQUE,
@@ -118,13 +81,9 @@ CREATE OR REPLACE TABLE DIM_READERS (
     created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'DEMO: sfe-simple-stream - Badge reader dimension';
+COMMENT = 'DEMO: Reader dimension';
 
--- ============================================================================
--- STEP 3: Seed Dimension Tables with Sample Data
--- ============================================================================
-
--- Seed Users (5 sample users)
+-- Seed data
 INSERT INTO DIM_USERS (user_id, user_name, user_type, department, clearance_level, is_active, is_current)
 VALUES
     ('USR-001', 'John Smith', 'EMPLOYEE', 'Engineering', 'CONFIDENTIAL', TRUE, TRUE),
@@ -133,7 +92,6 @@ VALUES
     ('USR-004', 'Alice Williams', 'EMPLOYEE', 'Security', 'SECRET', TRUE, TRUE),
     ('USR-005', 'Mike Davis', 'VISITOR', 'External', 'PUBLIC', TRUE, TRUE);
 
--- Seed Zones (5 sample zones)
 INSERT INTO DIM_ZONES (
     zone_id, reader_id, building_name, floor_number, zone_name, zone_type,
     capacity, requires_clearance, is_restricted, reader_location, reader_type
@@ -145,10 +103,7 @@ VALUES
     ('ZONE-CONF-3B', 'RDR-301', 'Main Building', 3, 'Conference Room 3B', 'CONFERENCE_ROOM', 20, NULL, FALSE, 'Floor 3 West', 'ENTRY'),
     ('ZONE-PARKING-1', 'RDR-P01', 'Parking Structure', 1, 'Employee Parking Level 1', 'PARKING', 200, NULL, FALSE, 'Garage Entry', 'ENTRY');
 
--- ============================================================================
--- STEP 4: Create Fact Table (Clustered)
--- ============================================================================
-
+-- Fact table (clustered for performance)
 CREATE OR REPLACE TABLE FCT_ACCESS_EVENTS (
     event_key NUMBER AUTOINCREMENT PRIMARY KEY,
     user_key NUMBER NOT NULL,
@@ -170,42 +125,5 @@ CREATE OR REPLACE TABLE FCT_ACCESS_EVENTS (
     CONSTRAINT fk_fct_user FOREIGN KEY (user_key) REFERENCES DIM_USERS(user_key),
     CONSTRAINT fk_fct_zone FOREIGN KEY (zone_key) REFERENCES DIM_ZONES(zone_key)
 )
-COMMENT = 'DEMO: sfe-simple-stream - Fact table for badge access events'
+COMMENT = 'DEMO: Access events fact table'
 CLUSTER BY (event_date);
-
--- ============================================================================
--- VERIFICATION QUERIES
--- ============================================================================
-
-USE ROLE SYSADMIN;
-USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA ANALYTICS_LAYER;
-
--- Verify staging table
-DESCRIBE TABLE STAGING_LAYER.STG_BADGE_EVENTS;
-
--- Verify dimension tables
-SHOW TABLES LIKE 'DIM_%' IN SCHEMA ANALYTICS_LAYER;
-
--- Verify fact table
-DESCRIBE TABLE FCT_ACCESS_EVENTS;
-
--- Verify seed data
-SELECT 'DIM_USERS' AS dimension, COUNT(*) AS seed_rows FROM DIM_USERS;
-SELECT 'DIM_ZONES' AS dimension, COUNT(*) AS seed_rows FROM DIM_ZONES;
-
--- Verify clustering
-SHOW TABLES LIKE 'FCT_ACCESS_EVENTS' IN SCHEMA ANALYTICS_LAYER;
-
--- ============================================================================
--- EXPECTED OUTPUT
--- ============================================================================
--- 
---  Staging table created: STG_BADGE_EVENTS (transient, 1-day retention)
---  Dimension tables created: DIM_USERS, DIM_ZONES, DIM_READERS
---  Seed data loaded: 5 users, 5 zones
---  Fact table created: FCT_ACCESS_EVENTS (clustered by event_date)
--- 
--- Next step: Run sql/01_setup/03_enable_tasks.sql
--- ============================================================================
-

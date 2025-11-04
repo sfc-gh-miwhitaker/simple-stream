@@ -1,424 +1,204 @@
 # Simple Stream
 
-⚠️ **DEMO PROJECT - NOT FOR PRODUCTION USE**
+High-speed data ingestion with Snowpipe Streaming, deployed from Git in one command.
 
-A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RFID badge tracking as an example. This is a reference implementation for educational purposes only.
+## What You Get
 
-**📦 Repository:** [https://github.com/sfc-gh-miwhitaker/sfe-simple-stream](https://github.com/sfc-gh-miwhitaker/sfe-simple-stream)
+A complete streaming pipeline with:
+- Snowpipe Streaming REST API endpoint
+- Automated CDC tasks (deduplication, enrichment)
+- Dimensional model (users, zones, facts)
+- Real-time monitoring views
 
-**🗄️ Database:** All artifacts created in `SNOWFLAKE_EXAMPLE` database  
-**🏷️ Isolation:** Uses `SFE_` prefix for account-level objects to prevent production collision
+## Deploy (45 seconds)
 
-## 🚀 Get Started in 5 Minutes (Browser Only)
-
-**Zero local setup required!** Run the entire demo from Snowflake Workspaces using Git integration.
-
-✅ No Python installation  
-✅ No Snowflake CLI  
-✅ No local configuration files  
-✅ No repository forking or authentication needed (public repo = read-only clone)  
-✅ Credentials stored in Snowflake Secrets  
-✅ Simulator runs in Snowflake Notebooks  
-
-### Quick Start (First Time Setup)
-
-**Step 1: One-Time API Integration Setup** (30 seconds, ACCOUNTADMIN required)
-
-Before you can connect Git repositories in Snowsight, you need to create an API Integration. This is a **one-time account-level setup** that can be reused across all demo projects.
+### Step 1: Deploy Pipeline
 
 ```sql
--- Run this once per Snowflake account (requires ACCOUNTADMIN)
--- Safe to run multiple times - won't affect existing Git workspaces
-USE ROLE ACCOUNTADMIN;
-
-CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
-  API_PROVIDER = git_https_api
-  API_ALLOWED_PREFIXES = ('https://github.com/')
-  ENABLED = TRUE
-  COMMENT = 'DEMO: GitHub integration for public repository access';
+@sql/deploy.sql
 ```
 
-✅ **Already have `SFE_GIT_API_INTEGRATION`?** Script will skip creation - safe to run anyway!
+**Time:** ~45 seconds  
+**Result:**
+- Database: `SNOWFLAKE_EXAMPLE`
+- Pipe: `RAW_INGESTION.SFE_BADGE_EVENTS_PIPE`
+- Tasks: Auto-running every 1 minute
+- Views: 7 monitoring views
+- **API configuration output** (copy and share with data provider)
 
-**Step 2: Create Git Workspace in Snowsight UI** (30 seconds)
+### Step 2: Configure Authentication
 
-1. Go to **Projects → Workspaces** → Click **"+ Workspace"** → Select **"From Git repository"**
-2. Fill in the form:
-   - **Repository URL:** `https://github.com/sfc-gh-miwhitaker/sfe-simple-stream`
-   - **Workspace Name:** `sfe-simple-stream`
-   - **API Integration:** `SFE_GIT_API_INTEGRATION` (from Step 1)
-   - **Authentication:** No authentication (public repo)
-   - **Branch:** `main`
-3. Click **"Create"**
-
-✅ **Done!** Your workspace now has all SQL scripts, notebooks, and docs.
-
-**Step 3: Deploy & Run** (4 minutes)
-
-👉 **[Continue with: QUICKSTART.md](QUICKSTART.md)** for the complete deployment steps.
-
----
-
-**That's it!** Data flows: Raw → Staging → Analytics (via Streams & Tasks). Query in <10 seconds.
-
-See [`docs/REST_API_GUIDE.md`](docs/REST_API_GUIDE.md) for complete API reference and error handling.
-
----
-
-## Objects Created by This Demo
-
-### Account-Level Objects (Require ACCOUNTADMIN)
-
-| Object Type | Name | Purpose |
-|-------------|------|---------|
-| API Integration | `SFE_GIT_API_INTEGRATION` | GitHub repository access for public repo cloning |
-
-**Note:** Tasks use **serverless compute** (no warehouse needed) - Snowflake automatically manages compute resources.
-
-### Database Objects (in SNOWFLAKE_EXAMPLE)
-
-| Schema | Object Type | Name | Purpose |
-|--------|-------------|------|---------|
-| `DEMO_REPO` | Git Repository | `sfe_simple_stream_repo` | Code repository (read-only clone from sfe-simple-stream) |
-| `DEMO_REPO` | Secret | `SFE_SS_ACCOUNT` | Snowflake account identifier |
-| `DEMO_REPO` | Secret | `SFE_SS_USER` | Username for JWT authentication |
-| `DEMO_REPO` | Secret | `SFE_SS_JWT_KEY` | JWT private key (RSA) |
-| `DEMO_REPO` | Procedure | `SFE_DEPLOY_PIPELINE()` | Automated deployment from Git |
-| `DEMO_REPO` | Procedure | `SFE_VALIDATE_PIPELINE()` | Pipeline health check |
-| `DEMO_REPO` | Procedure | `SFE_RESET_PIPELINE()` | Clean teardown for re-deployment |
-| `RAW_INGESTION` | Table | `RAW_BADGE_EVENTS` | Snowpipe Streaming target table |
-| `RAW_INGESTION` | Pipe | `sfe_badge_events_pipe` | REST API ingestion endpoint |
-| `RAW_INGESTION` | Stream | `sfe_badge_events_stream` | CDC stream for badge events |
-| `RAW_INGESTION` | Task | `sfe_raw_to_staging_task` | Incremental ETL: Raw → Staging |
-| `STAGING_LAYER` | Table | `STG_BADGE_EVENTS` | Cleaned and deduplicated events |
-| `STAGING_LAYER` | Task | `sfe_staging_to_analytics_task` | Incremental ETL: Staging → Analytics |
-| `ANALYTICS_LAYER` | Table | `DIM_USERS` | User dimension (Type 2 SCD) |
-| `ANALYTICS_LAYER` | Table | `DIM_ZONES` | Zone dimension |
-| `ANALYTICS_LAYER` | Table | `DIM_READERS` | Badge reader dimension |
-| `ANALYTICS_LAYER` | Table | `FCT_ACCESS_EVENTS` | Access event fact table |
-
-> **Note:** All object names with generic terms use the `SFE_` prefix (SnowFlake Example) to prevent collision with production resources. Domain-specific names (like `RAW_BADGE_EVENTS`) don't require the prefix.
-
----
-
-## Overview
-
-This project demonstrates how to ingest several million RFID badge events over a 10-day period using Snowflake's high-performance streaming architecture (GA September 2025). Perfect for property access control, asset tracking, and real-time location systems.
-
-### Key Features
-
-- **Snowpipe Streaming GA (Sep 2025)**: Direct REST ingestion with continuation tokens, zero middleware
-- **Native Snowflake Solution**: 100% in Snowflake - no external services to deploy
-- **High Performance**: Up to 10 GB/sec per table, <10 second query latency
-- **In-Flight Transformations**: Clean, validate, and enrich data during ingestion
-- **Complete Pipeline**: Raw → Staging → Analytics with CDC using Streams and Tasks
-- **Production Ready**: Monitoring, data quality checks, real-time dashboards, and comprehensive documentation
-- **Enterprise Ready**: Built-in monitoring, Streams + Tasks CDC pattern, and extensible partner onboarding blueprint
-
-### For Enterprise & Partner Deployments
-
-This project doubles as a **customer-partner playbook** for repeatable RFID vendor integrations:
-
-| Phase | Customer Team Owns | Partner/Vendor Owns |
-|-------|-------------------|---------------------|
-| **0. Success Alignment** | Define access outcomes, SLAs, data retention, compliance tagging | Share deployment constraints, badge schema, sample payloads |
-| **1. Foundation** | Execute numbered SQL scripts (`sql/01_setup/`) | N/A |
-| **2. Vendor Integration** | Issue Snowflake credentials, configure Snowpipe Streaming pipe | Plug RFID readers into provided REST endpoint, map fields to schema |
-| **3. Validation & QA** | Run data-quality checks (`sql/04_data_quality/`) | Provide test payloads, confirm data governance requirements |
-| **4. Monitoring & Dashboards** | Create Snowsight worksheets or BI dashboards for security teams | Confirm operational KPIs and alerting thresholds |
-| **5. Scale Out** | Define partner onboarding checklist, clone schemas for multi-vendor | Reuse automation scripts and REST endpoints for each location |
-
-**Key Benefits for Enterprise:**
-- **<10 second latency** from badge scan to analytics view, meeting real-time security SLAs
-- **Zero middleware** - RFID vendors POST directly to Snowflake, eliminating infrastructure management
-- **Built-in CDC** - Streams + Tasks pattern keeps compute off until changes arrive, minimizing spend
-- **Partner-ready artifacts** - REST API templates, field mappings, simulator, and scaling playbook included
-- **Extensible governance** - Add partners by cloning schemas, creating new pipes/channels, reusing tag model
-
-## Quick Start
-
-> **Need a guided walkthrough?** Start with [`QUICKSTART.md`](QUICKSTART.md) for the 5-minute browser-only setup.
-
-### Snowflake-Native Deployment (Browser Only)
-
-1. **Add Public Repository to Snowflake** (1 min)
-   - Open Snowsight → Projects → Workspaces → + SQL File
-   - Run `sql/00_git_setup/01_git_repository_setup.sql`
-   - Repository clones as read-only (no authentication needed)
-   
-2. **Configure Secrets** (1 min)
-   - Generate RSA key pair (see `config/jwt_keypair_setup.md`)
-   - Run `sql/00_git_setup/02_configure_secrets.sql`
-   
-3. **Deploy Pipeline**
-   ```sql
-   CALL SNOWFLAKE_EXAMPLE.GIT_REPOS.DEPLOY_PIPELINE();
-   ```
-   
-4. **Run Simulator Notebook**
-   - Projects → Notebooks → Import from Git
-   - Select `notebooks/RFID_Simulator.ipynb`
-   - Run All
-   
-5. **Validate**
-   ```sql
-   CALL SNOWFLAKE_EXAMPLE.GIT_REPOS.VALIDATE_PIPELINE();
-   ```
-
-**Total time: ~5 minutes | Tools required: Browser**
-
-For detailed steps (key generation, advanced deployment, troubleshooting), see:
-
-1. [`docs/01-SETUP.md`](docs/01-SETUP.md)
-2. [`docs/02-DEPLOYMENT.md`](docs/02-DEPLOYMENT.md)
-3. [`docs/03-CONFIGURATION.md`](docs/03-CONFIGURATION.md)
-4. [`docs/04-RUNNING.md`](docs/04-RUNNING.md)
-5. [`docs/05-MONITORING.md`](docs/05-MONITORING.md)
-
-### First Event Test
-
-Want to send a single event via REST? Follow the step-by-step instructions in [`docs/04-RUNNING.md`](docs/04-RUNNING.md) and [`docs/REST_API_GUIDE.md`](docs/REST_API_GUIDE.md). They include ready-to-run `curl` examples and JWT authentication tips.
-
-## Guided Customer Lab
-
-Need the storyline for executives and integrators? Follow the numbered guides `docs/01-SETUP.md` through `docs/05-MONITORING.md`. They provide a complete walkthrough from prerequisites to production monitoring.
-
-## Project Structure
-
-```
-├── README.md               # Overview (you're here)
-├── QUICKSTART.md           # 5-minute setup guide
-├── docs/                   # Numbered walkthrough & reference docs
-│   ├── 01-SETUP.md
-│   ├── 02-DEPLOYMENT.md
-│   ├── 03-CONFIGURATION.md
-│   ├── 04-RUNNING.md
-│   ├── 05-MONITORING.md
-│   └── PLATFORM_GUIDE.md, REST_API_GUIDE.md, ...
-├── sql/                    # Snowflake SQL scripts (numbered)
-│   ├── 01_setup/
-│   ├── 02_validation/
-│   ├── 03_monitoring/
-│   ├── 04_data_quality/
-│   └── 99_cleanup/
-├── notebooks/              # Jupyter notebooks (primary interface)
-│   └── RFID_Simulator.ipynb  # Complete simulator with REST API
-├── config/                 # `.env` template and key setup guide
-└── examples/               # Sample scripts & customization templates
+```sql
+@sql/configure_auth.sql
 ```
 
-## Running the Simulator
+**Time:** ~5 minutes  
+**What it does:**
+- Creates service account (`sfe_ingest_user`)
+- Grants pipe INSERT privileges
+- Guides you through key pair generation
+- Registers public key with Snowflake
+- Outputs credentials for data provider
 
-**Primary Interface: Jupyter Notebook**
+## What It Creates
 
-Use `notebooks/RFID_Simulator.ipynb` for the complete simulation experience:
-- ✅ Full REST API implementation with JWT authentication
-- ✅ Interactive step-by-step execution
-- ✅ Real-time validation and monitoring
-- ✅ Visual feedback and metrics
+**Data Flow:**
+```
+REST API → Raw Table → Stream → Tasks → Analytics
+```
 
-**Quick Example:**
+## Monitor
 
-For a standalone event generation example (no REST API), see `examples/custom_simulation.py`.
+```sql
+-- Live metrics
+SELECT * FROM RAW_INGESTION.V_INGESTION_METRICS;
+
+-- Pipeline health
+SELECT * FROM RAW_INGESTION.V_END_TO_END_LATENCY;
+
+-- Cost tracking
+SELECT * FROM RAW_INGESTION.V_STREAMING_COSTS;
+```
+
+## Validate
+
+```sql
+@sql/validate.sql
+```
+
+Runs comprehensive checks on all pipeline components.
+
+## Cleanup
+
+```sql
+@sql/cleanup.sql
+```
+
+Removes everything (keeps database for audit).
+
+## How It Works
+
+**The Git Integration Magic:**
+
+1. Script creates Git repository object pointing to this repo
+2. Uses `EXECUTE IMMEDIATE FROM @repo/branches/main/sql/...`
+3. Snowflake pulls scripts directly from GitHub
+4. Deploys complete pipeline
+
+**The Pipeline:**
+
+1. **Ingest**: Snowpipe Streaming writes JSON to `RAW_BADGE_EVENTS`
+2. **CDC**: Stream tracks all changes
+3. **Dedupe**: Task 1 cleans RAW → STAGING (every minute)
+4. **Enrich**: Task 2 joins with dimensions, loads FACT table
+5. **Monitor**: Views show metrics, costs, performance
 
 ## Architecture
 
-### Data Flow
-
 ```
-RFID Vendor → POST https://[account].snowflakecomputing.com/v2/streaming/...
-           ↓
-    PIPE Object (in-flight transformations)
-           ↓
-    RAW_BADGE_EVENTS
-           ↓
-    Stream (CDC)
-           ↓
-    Task (1-min, triggered by stream)
-           ↓
-    STG_BADGE_EVENTS (deduplication)
-           ↓
-    Task (MERGE operations)
-           ↓
-    Analytics: DIM_USERS, DIM_ZONES, FCT_ACCESS_EVENTS
-```
-
-### Use Case
-
-Property access control with RFID badges:
-- Users wearing badges (employees, visitors, contractors)
-- Badge readers at entry/exit points, zone transitions, secure areas
-- Real-time tracking of movement and occupancy
-- Security alerts and access control
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| `docs/GITHUB_REPOSITORY_SETUP.md` | How the public repository supports read-only access |
-| `docs/01-SETUP.md` | Install prerequisites and verify environment |
-| `docs/02-DEPLOYMENT.md` | Deploy Snowflake database, schemas, streams, and tasks |
-| `docs/03-CONFIGURATION.md` | Configure JWT authentication and `.env` settings |
-| `docs/04-RUNNING.md` | Run the simulator and validate pipeline health |
-| `docs/05-MONITORING.md` | Monitor, troubleshoot, and optimize the pipeline |
-| ~~`docs/PLATFORM_GUIDE.md`~~ | *(Optional - platform notes, not yet created)* |
-| ~~`docs/LAB_GUIDE.md`~~ | *(Optional - executive narrative, not yet created)* |
-| `docs/REST_API_GUIDE.md` | REST API reference and advanced ingestion patterns |
-| `docs/ARCHITECTURE.md` | Detailed architecture and design decisions |
-| `docs/DATA_DICTIONARY.md` | Dimension and fact table definitions |
-
-## Key Components
-
-### PIPE Object with In-Flight Transformations
-
-The PIPE object centralizes ingestion logic:
-
-```sql
-CREATE PIPE badge_events_pipe
-AS COPY INTO RAW_BADGE_EVENTS
-FROM (
-  SELECT 
-    $1:badge_id::STRING as badge_id,
-    $1:user_id::STRING as user_id,
-    TRY_TO_TIMESTAMP_NTZ($1:event_timestamp) as event_timestamp,
-    COALESCE($1:signal_strength::NUMBER, -999) as signal_strength,
-    CASE 
-      WHEN $1:signal_strength::NUMBER < -80 THEN 'WEAK'
-      ELSE 'STRONG'
-    END as signal_quality,
-    CURRENT_TIMESTAMP() as ingestion_time
-  FROM TABLE(DATA_SOURCE(TYPE => 'STREAMING'))
-)
-FILE_FORMAT = (TYPE = JSON);
+┌─────────────────┐
+│  REST API Call  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ RAW_BADGE_EVENTS│ ← Pipe transforms JSON
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ sfe_badge_      │ ← Stream tracks changes
+│ events_stream   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 1          │ ← Runs every 1 min
+│ (Dedupe)        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ STG_BADGE_EVENTS│
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Task 2          │ ← Runs after Task 1
+│ (Enrich)        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ DIM_USERS       │
+│ DIM_ZONES       │
+│ FCT_ACCESS      │ ← Analytics ready
+│   _EVENTS       │
+└─────────────────┘
 ```
 
-### CDC Pipeline
+## Files
 
-Streams and Tasks provide near-real-time transformation:
-
-```sql
--- Stream captures changes
-CREATE STREAM raw_badge_events_stream 
-ON TABLE RAW_BADGE_EVENTS;
-
--- Task processes changes every minute
-CREATE TASK raw_to_staging_task
-  WAREHOUSE = etl_wh
-  SCHEDULE = '1 MINUTE'
-WHEN SYSTEM$STREAM_HAS_DATA('raw_badge_events_stream')
-AS
-  INSERT INTO STG_BADGE_EVENTS
-  SELECT * FROM raw_badge_events_stream
-  QUALIFY ROW_NUMBER() OVER (
-    PARTITION BY badge_id, event_timestamp 
-    ORDER BY ingestion_time DESC
-  ) = 1;
+```
+sql/
+├── deploy.sql        ← Run this (everything)
+├── 01_core.sql       ← Raw table, pipe, stream
+├── 02_analytics.sql  ← Dimensions, facts
+├── 03_tasks.sql      ← CDC automation
+├── 04_monitoring.sql ← Monitoring views
+├── validate.sql      ← Comprehensive checks
+├── cleanup.sql       ← Remove everything
+└── optional/         ← Advanced features
 ```
 
-## Monitoring
+## Key Features Demonstrated
 
-Monitor ingestion health with built-in views:
+1. **Snowpipe Streaming REST API**
+   - High-speed ingestion (millions of rows/sec)
+   - JSON transformation in pipe
+   - Server-side processing
 
-```sql
--- Check channel status
-SELECT * FROM V_INGESTION_METRICS;
+2. **Git-Based Deployment**
+   - `EXECUTE IMMEDIATE FROM @repo/...`
+   - Version controlled pipeline
+   - No manual file uploads
 
--- View end-to-end latency
-SELECT * FROM V_END_TO_END_LATENCY;
+3. **CDC with Streams & Tasks**
+   - Automatic change tracking
+   - Incremental processing
+   - Task DAG (dependent execution)
 
--- Check clustering efficiency
-SELECT * FROM V_PARTITION_EFFICIENCY;
-```
+4. **Dimensional Modeling**
+   - Type 2 SCD (slowly changing dimensions)
+   - Clustered fact table
+   - Seed data for testing
 
-For live dashboards, save these queries in Snowsight Workspaces or your BI tool of choice. See [`docs/05-MONITORING.md`](docs/05-MONITORING.md) for recommended charts, KPIs, and dashboard templates.
+5. **Built-in Monitoring**
+   - Ingestion metrics
+   - Cost tracking
+   - Performance views
 
-## Getting Updates
+## Requirements
 
-Since you're using a read-only clone of the public repository, you can easily fetch the latest updates:
+- Snowflake account
+- ACCOUNTADMIN (for API integration)
+- SYSADMIN (for objects)
 
-```sql
--- Fetch latest changes from GitHub
-USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA DEMO_REPO;
-ALTER GIT REPOSITORY sfe_simple_stream_repo FETCH;
+## Time Investment
 
--- Verify you have the latest files
-LIST @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main;
-```
+- Deploy: 45 seconds
+- Learn: 10 minutes (read the 5 SQL files)
+- Test: 5 minutes (send data, check views)
 
-After fetching updates, you can re-deploy using:
-```sql
-CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_DEPLOY_PIPELINE();
-```
+Total: 15 minutes to fully understand Snowpipe Streaming.
 
-## Complete Cleanup
+## What Makes This Different
 
-To remove all demo artifacts:
+Most streaming examples are complex. This one is deliberately simple:
+- One command deployment
+- Minimal objects (only what's needed)
+- Clear data flow
+- Self-validating
+- Easy cleanup
 
-```sql
--- Execute teardown script (drops all objects except database and API integration)
--- Run: sql/99_cleanup/teardown_all.sql
-
--- Or use stored procedure (if it exists):
-CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_RESET_PIPELINE();
-```
-
-**What gets removed:**
-- ✅ All schemas (RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER, DEMO_REPO) with CASCADE
-- ✅ All contained objects (tables, views, streams, pipes, functions, procedures, secrets, Git repo)
-- ✅ All tasks (after proper suspension)
-- ✅ Project-specific warehouse (SFE_SIMPLE_STREAM_WH)
-
-**What's intentionally preserved:**
-- ✅ `SNOWFLAKE_EXAMPLE` database (per cleanup rule)
-- ✅ `SFE_GIT_API_INTEGRATION` (shared across demo projects, can be reused)
-
-**Why preserve the API Integration?**
-- One-time setup with ACCOUNTADMIN privileges
-- Can be safely shared across multiple demo projects
-- No ongoing cost or security risk
-- Avoids needing to re-create it for each demo
-
-**To manually remove the API Integration (optional):**
-```sql
--- Only run if you want to completely remove all traces
-USE ROLE ACCOUNTADMIN;
-DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
-DROP DATABASE IF EXISTS SNOWFLAKE_EXAMPLE CASCADE;
-```
-
-**Verification:**
-```sql
--- Verify warehouse was removed (should return no results):
-SHOW WAREHOUSES LIKE 'SFE_SIMPLE_STREAM%';
-
--- Verify API Integration still exists (should show 1 result):
-SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
-
--- Verify demo schemas were removed (should only show INFORMATION_SCHEMA and PUBLIC):
-SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
-```
-
-**Time:** < 1 minute
-
-## Performance Characteristics
-
-| Metric | Value |
-|--------|-------|
-| Max Throughput | 10 GB/sec per table |
-| Ingest-to-Query Latency | <10 seconds |
-| Max Request Size | 16 MB per POST |
-| Authentication | JWT with key-pair |
-| Pricing | Throughput-based (credits per GB) |
-
-## Support
-
-For questions or issues:
-1. Review documentation in `docs/` directory
-2. Check Snowflake documentation for Snowpipe Streaming
-3. Examine monitoring views for ingestion health
-
-## License
-
-This is a reference implementation for educational and demonstration purposes.
-
+Perfect for learning, demos, and as a template for production pipelines.
