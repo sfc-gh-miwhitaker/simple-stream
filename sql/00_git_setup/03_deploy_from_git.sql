@@ -13,6 +13,7 @@
  *   2. Analytics layer (staging, dimensions, facts)
  *   3. Task automation (CDC tasks with auto-resume)
  *   4. Monitoring views
+ *   5. RFID_Simulator notebook (from Git repository)
  * 
  * DEPENDENCIES:
  *   - Git workspace created in Snowsight (contains the repository)
@@ -55,6 +56,9 @@ EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branc
 
 -- Step 4: Monitoring views
 EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/03_monitoring/monitoring_views.sql;
+
+-- Step 5: Create notebook from Git repository
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/00_git_setup/05_create_notebook.sql;
 
 -- ============================================================================
 -- VERIFICATION: Deployment Validation Report
@@ -144,6 +148,17 @@ SELECT
 FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
 WHERE "name" IN ('SFE_RAW_TO_STAGING_TASK', 'SFE_STAGING_TO_ANALYTICS_TASK');
 
+-- Check notebook separately
+SHOW NOTEBOOKS IN SCHEMA DEMO_REPO;
+
+SELECT
+    'Notebook (DEMO_REPO)' AS object_type,
+    COUNT(*) AS actual_count,
+    1 AS expected_count,
+    IFF(COUNT(*) = 1, 'PASS', 'FAIL') AS status
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+WHERE "name" = 'RFID_SIMULATOR';
+
 -- ============================================================================
 -- EXPECTED VALIDATION RESULTS
 -- ============================================================================
@@ -155,5 +170,8 @@ WHERE "name" IN ('SFE_RAW_TO_STAGING_TASK', 'SFE_STAGING_TO_ANALYTICS_TASK');
 --   - Verify SYSADMIN has necessary privileges
 --   - Run sql/99_cleanup/teardown_all.sql and retry deployment
 -- 
--- Next step: Run notebook notebooks/RFID_Simulator.ipynb to send simulated data
+-- Next steps:
+--   1. Configure secrets: sql/00_git_setup/02_configure_secrets.sql
+--   2. Open notebook: Projects → Notebooks → RFID_SIMULATOR
+--   3. Run simulation to send test events
 -- ============================================================================

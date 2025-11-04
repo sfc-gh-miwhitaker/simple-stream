@@ -14,6 +14,7 @@
  *   - Procedure: SFE_DEPLOY_PIPELINE() - Deploy full pipeline from Git
  *   - Procedure: SFE_VALIDATE_PIPELINE() - Return health check JSON
  *   - Procedure: SFE_RESET_PIPELINE() - Clean teardown
+ *   - Procedure: SFE_RUN_SIMULATOR() - Execute RFID simulator notebook
  * 
  * DEPENDENCIES:
  *   - sql/00_git_setup/01_git_repository_setup.sql (Git repo must exist)
@@ -160,12 +161,46 @@ END;
 $$;
 
 -- ============================================================================
+-- PROCEDURE 4: Execute RFID Simulator Notebook
+-- ============================================================================
+-- 
+-- Wrapper to execute the notebook programmatically
+-- 
+-- Usage:
+--   CALL SFE_RUN_SIMULATOR(1000);  -- Send 1000 events
+-- 
+-- Returns: Notebook execution result
+-- 
+-- WARNING: Requires secrets to be configured first (02_configure_secrets.sql)
+-- 
+
+CREATE OR REPLACE PROCEDURE SFE_RUN_SIMULATOR(num_events INT DEFAULT 1000)
+RETURNS STRING
+LANGUAGE SQL
+COMMENT = 'DEMO: sfe-simple-stream - Execute RFID simulator notebook programmatically'
+EXECUTE AS CALLER
+AS
+$$
+BEGIN
+    -- Execute the notebook
+    -- Note: This runs all cells in the notebook sequentially
+    EXECUTE NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR();
+    
+    RETURN 'Simulator executed with ' || num_events || ' events';
+EXCEPTION
+    WHEN OTHER THEN
+        RETURN 'ERROR: ' || SQLERRM || ' - Ensure secrets are configured (02_configure_secrets.sql)';
+END;
+$$;
+
+-- ============================================================================
 -- GRANT PERMISSIONS
 -- ============================================================================
 
 GRANT USAGE ON PROCEDURE SFE_DEPLOY_PIPELINE() TO ROLE SYSADMIN;
 GRANT USAGE ON PROCEDURE SFE_VALIDATE_PIPELINE() TO ROLE SYSADMIN;
 GRANT USAGE ON PROCEDURE SFE_RESET_PIPELINE() TO ROLE SYSADMIN;
+GRANT USAGE ON PROCEDURE SFE_RUN_SIMULATOR(INT) TO ROLE SYSADMIN;
 
 -- ============================================================================
 -- VERIFICATION: Test procedures exist and are callable
@@ -181,7 +216,11 @@ CALL SFE_VALIDATE_PIPELINE();
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
---  Procedures created: SFE_DEPLOY_PIPELINE, SFE_VALIDATE_PIPELINE, SFE_RESET_PIPELINE
+--  Procedures created: 
+--    - SFE_DEPLOY_PIPELINE
+--    - SFE_VALIDATE_PIPELINE
+--    - SFE_RESET_PIPELINE
+--    - SFE_RUN_SIMULATOR
 --  Permissions granted to SYSADMIN role
 --  Validation test returns JSON object (may show 0 rows if pipeline not deployed)
 -- 
@@ -193,13 +232,17 @@ CALL SFE_VALIDATE_PIPELINE();
 -- Check pipeline health:
 --   CALL SFE_VALIDATE_PIPELINE();
 -- 
+-- Run simulator (send test data):
+--   CALL SFE_RUN_SIMULATOR(1000);  -- 1000 events
+-- 
 -- Reset for re-deployment:
 --   CALL SFE_RESET_PIPELINE();
 --   CALL SFE_DEPLOY_PIPELINE();  -- Re-deploy fresh
 -- 
 -- NOTE: These are convenience wrappers. You can also run scripts directly:
---   - @sql/00_git_setup/03_deploy_from_git.sql
---   - @sql/02_validation/validate_pipeline.sql
---   - @sql/99_cleanup/teardown_all.sql
+--   - sql/00_git_setup/03_deploy_from_git.sql
+--   - sql/02_validation/validate_pipeline.sql
+--   - sql/99_cleanup/teardown_all.sql
+--   - Projects → Notebooks → RFID_SIMULATOR (manual run)
 -- 
 -- ============================================================================
