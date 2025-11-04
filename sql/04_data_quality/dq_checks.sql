@@ -1,23 +1,31 @@
--- ============================================================================
--- RFID Badge Tracking: Modern Data Quality with Data Metric Functions (DMF)
--- ============================================================================
--- Purpose: Automated data quality monitoring using Snowflake's DMF framework
---          (GA 2024). Combines system DMFs with custom metrics for comprehensive
---          data quality validation.
---
--- Features:
---   - Automated scheduling (cron, interval, or trigger-based)
---   - System DMFs for common metrics (NULL counts, freshness, duplicates)
---   - Custom DMFs for business logic validation
---   - Expectations with automatic violation detection
---   - Centralized event table for monitoring results
---   - OpenTelemetry format for observability integration
---
--- Reference: https://docs.snowflake.com/en/user-guide/data-quality-intro
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Data Quality Monitoring with Data Metric Functions (DMF)
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Automated data quality monitoring using Snowflake's Data Metric Functions
+ *   framework (GA 2024). Demonstrates system and custom DMFs for comprehensive
+ *   data quality validation.
+ * 
+ * FEATURES:
+ *   - Automated scheduling (cron, interval, or trigger-based)
+ *   - System DMFs for common metrics (NULL counts, freshness, duplicates)
+ *   - Custom DMFs for business logic validation
+ *   - Expectations with automatic violation detection
+ *   - Centralized event table for monitoring results
+ *   - OpenTelemetry format for observability integration
+ * 
+ * REFERENCE:
+ *   https://docs.snowflake.com/en/user-guide/data-quality-intro
+ * 
+ * CLEANUP:
+ *   See cleanup examples at end of this file
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA STAGE_BADGE_TRACKING;
+USE SCHEMA RAW_INGESTION;
 
 -- ============================================================================
 -- Step 0: Prerequisites
@@ -35,7 +43,7 @@ USE SCHEMA STAGE_BADGE_TRACKING;
 -- ============================================================================
 -- All DMF measurements are automatically logged to this centralized table
 
-CREATE EVENT TABLE IF NOT EXISTS SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.DATA_QUALITY_EVENTS;
+CREATE EVENT TABLE IF NOT EXISTS SNOWFLAKE_EXAMPLE.RAW_INGESTION.DATA_QUALITY_EVENTS;
 
 -- Set this as the event table at DATABASE level (not account-wide)
 -- This limits scope to SNOWFLAKE_EXAMPLE database only, avoiding interference
@@ -44,7 +52,7 @@ CREATE EVENT TABLE IF NOT EXISTS SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.DATA_QUA
 -- WARNING: To use account-wide event collection (impacts ALL features):
 --          ALTER ACCOUNT SET EVENT_TABLE = ... (requires ACCOUNTADMIN)
 ALTER DATABASE SNOWFLAKE_EXAMPLE 
-  SET EVENT_TABLE = SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.DATA_QUALITY_EVENTS;
+  SET EVENT_TABLE = SNOWFLAKE_EXAMPLE.RAW_INGESTION.DATA_QUALITY_EVENTS;
 
 -- ============================================================================
 -- Step 2: Define Custom Data Metric Functions
@@ -153,11 +161,11 @@ ALTER TABLE RAW_BADGE_EVENTS SET
   DATA_METRIC_SCHEDULE = '15 MINUTE';
 
 -- STG_BADGE_EVENTS: Run checks on DML changes (trigger-based)
-ALTER TABLE SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS SET
+ALTER TABLE SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS SET
   DATA_METRIC_SCHEDULE = 'TRIGGER_ON_CHANGES';
 
 -- FCT_ACCESS_EVENTS: Run checks hourly at :00
-ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS SET
+ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS SET
   DATA_METRIC_SCHEDULE = 'USING CRON 0 * * * * UTC';
 
 -- ============================================================================
@@ -235,12 +243,12 @@ ALTER TABLE RAW_BADGE_EVENTS
 -- ============================================================================
 
 -- Staging row count should match or exceed raw (after processing)
-ALTER TABLE SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.ROW_COUNT ON ()
   EXPECTATION data_exists (VALUE > 0);
 
 -- NULL checks on critical staging fields
-ALTER TABLE SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.NULL_COUNT ON (signal_quality)
   EXPECTATION quality_populated (VALUE = 0);
 
@@ -249,20 +257,20 @@ ALTER TABLE SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS
 -- ============================================================================
 
 -- Monitor fact table row count growth
-ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.ROW_COUNT ON ();
 
 -- Check for NULL surrogate keys (expect 0)
-ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.NULL_COUNT ON (user_key)
   EXPECTATION valid_user_key (VALUE = 0);
 
-ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.NULL_COUNT ON (zone_key)
   EXPECTATION valid_zone_key (VALUE = 0);
 
 -- Check fact table freshness (expect data within last hour)
-ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
+ALTER TABLE SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
   ADD DATA METRIC FUNCTION SNOWFLAKE.CORE.FRESHNESS ON (event_timestamp)
   EXPECTATION recent_data (VALUE <= 60);
 
@@ -333,9 +341,10 @@ ORDER BY measurement_hour DESC, violation_count DESC;
 -- ============================================================================
 
 -- Task to check for violations and send alerts
-CREATE OR REPLACE TASK ALERT_ON_DATA_QUALITY_VIOLATIONS
-  WAREHOUSE = COMPUTE_WH
+CREATE OR REPLACE TASK sfe_alert_on_data_quality_violations
+  WAREHOUSE = SFE_SIMPLE_STREAM_WH
   SCHEDULE = '5 MINUTE'
+  COMMENT = 'DEMO: sfe-simple-stream - Alert task for data quality violations'
 WHEN
   SYSTEM$STREAM_HAS_DATA('CHECK_FOR_VIOLATIONS_STREAM')
 AS

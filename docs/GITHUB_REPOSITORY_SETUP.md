@@ -31,9 +31,9 @@ Users open Snowsight Workspaces (Projects → Workspaces → + SQL File) and run
 
 ```sql
 -- From: sql/00_git_setup/01_git_repository_setup.sql
-CREATE OR REPLACE GIT REPOSITORY simple_stream_repo
-  API_INTEGRATION = git_api_integration
-  ORIGIN = 'https://github.com/sfc-gh-miwhitaker/simple-stream';
+CREATE OR REPLACE GIT REPOSITORY sfe_simple_stream_repo
+  API_INTEGRATION = SFE_GIT_API_INTEGRATION
+  ORIGIN = 'https://github.com/sfc-gh-miwhitaker/sfe-simple-stream';
 ```
 
 **What happens:**
@@ -60,9 +60,34 @@ ALTER GIT REPOSITORY simple_stream_repo FETCH;
 
 ---
 
-## 🔧 Maintaining the Repository
+## 🔧 Snowflake API Integration Configuration
 
-### What You Need to Do
+### Critical: API_ALLOWED_PREFIXES
+
+The API Integration must specify your GitHub account/organization in the allowed prefixes:
+
+```sql
+CREATE OR REPLACE API INTEGRATION SFE_GIT_API_INTEGRATION
+  API_PROVIDER = git_https_api
+  API_ALLOWED_PREFIXES = ('https://github.com/sfc-gh-miwhitaker/')  -- ✅ Specific to your account
+  ENABLED = TRUE;
+  -- ⚠️ Do NOT include ALLOWED_AUTHENTICATION_SECRETS for public repos
+```
+
+**Common Error:**
+```
+Failed to access the Git Repository. Operation 'clone' is not authorized.
+```
+
+**Causes:**
+- ❌ Using generic prefix: `('https://github.com/')` - too broad, Snowflake may reject
+- ❌ Including `ALLOWED_AUTHENTICATION_SECRETS` parameter for public repos (should be omitted)
+- ❌ Wrong URL format or typo in repository URL
+- ✅ Solution: Use account-specific prefix WITHOUT authentication parameters for public repos
+
+### Maintaining the Repository
+
+**What You Need to Do:**
 
 1. **Keep Repository Public**
    - If you make it private, users will need authentication (SSH keys or GitHub tokens)

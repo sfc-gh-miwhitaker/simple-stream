@@ -1,16 +1,29 @@
--- ============================================================================
--- RFID Badge Tracking: Raw Landing Table
--- ============================================================================
--- Purpose: Create the raw landing table for RFID badge events ingested via
---          Snowpipe Streaming REST API. This table receives data directly
---          from the PIPE object with in-flight transformations applied.
---
--- Target: SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.RAW_BADGE_EVENTS
--- Source: RFID vendor system via Snowpipe Streaming REST API
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Raw Landing Table Creation
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create the raw landing table for RFID badge events ingested via
+ *   Snowpipe Streaming REST API. This table receives data directly
+ *   from the PIPE object with in-flight transformations applied.
+ * 
+ * OBJECTS CREATED:
+ *   - RAW_BADGE_EVENTS (Table) - Snowpipe Streaming target table
+ * 
+ * TARGET:
+ *   SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS
+ * 
+ * SOURCE:
+ *   RFID vendor system via Snowpipe Streaming REST API
+ * 
+ * CLEANUP:
+ *   See sql/99_cleanup/teardown_all.sql for complete removal
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA STAGE_BADGE_TRACKING;
+USE SCHEMA RAW_INGESTION;
 
 -- Create raw landing table
 CREATE OR REPLACE TABLE RAW_BADGE_EVENTS (
@@ -36,11 +49,10 @@ CREATE OR REPLACE TABLE RAW_BADGE_EVENTS (
     ingestion_time TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() COMMENT 'When record was ingested into Snowflake',
     raw_json VARIANT COMMENT 'Original JSON payload for debugging'
 )
-COMMENT = 'Raw RFID badge events ingested via Snowpipe Streaming REST API';
+COMMENT = 'DEMO: sfe-simple-stream - Raw RFID badge events ingested via Snowpipe Streaming REST API';
 
 -- Note: event_timestamp NOT NULL constraint enforced in column definition above
 -- Snowflake uses micro-partitions for automatic optimization; explicit indexes not needed
 
 -- Display table structure
 DESCRIBE TABLE RAW_BADGE_EVENTS;
-

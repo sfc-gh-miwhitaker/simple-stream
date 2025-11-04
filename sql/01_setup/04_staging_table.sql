@@ -1,22 +1,35 @@
--- ============================================================================
--- RFID Badge Tracking: Staging Table
--- ============================================================================
--- Purpose: Create a TRANSIENT staging table for deduplication and
---          transformation. This table sits between raw and analytics layers,
---          providing a clean, deduplicated dataset.
---
--- Key Features:
---   - TRANSIENT table type (no Fail-safe = lower storage costs)
---   - Deduplication handled by Task using QUALIFY
---   - Additional validation and standardization
---   - Optimized for rebuild from source
---
--- Target: SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS
--- Source: RAW_BADGE_EVENTS via Stream
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Staging Table Creation
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create a TRANSIENT staging table for deduplication and transformation.
+ *   This table sits between raw and analytics layers, providing a clean,
+ *   deduplicated dataset.
+ * 
+ * OBJECTS CREATED:
+ *   - STG_BADGE_EVENTS (Transient Table) - Cleaned and deduplicated events
+ * 
+ * KEY FEATURES:
+ *   - TRANSIENT table type (no Fail-safe = lower storage costs)
+ *   - Deduplication handled by Task using QUALIFY
+ *   - Additional validation and standardization
+ *   - Optimized for rebuild from source
+ * 
+ * TARGET:
+ *   SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS
+ * 
+ * SOURCE:
+ *   RAW_BADGE_EVENTS via Stream
+ * 
+ * CLEANUP:
+ *   See sql/99_cleanup/teardown_all.sql for complete removal
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA TRANSFORM_BADGE_TRACKING;
+USE SCHEMA STAGING_LAYER;
 
 -- Create transient staging table
 CREATE OR REPLACE TRANSIENT TABLE STG_BADGE_EVENTS (
@@ -45,30 +58,22 @@ CREATE OR REPLACE TRANSIENT TABLE STG_BADGE_EVENTS (
     -- Primary key for analytics
     CONSTRAINT pk_stg_badge_events PRIMARY KEY (badge_id, event_timestamp)
 )
-COMMENT = 'Staging table for deduplicated and validated badge events'
+COMMENT = 'DEMO: sfe-simple-stream - Staging table for deduplicated and validated badge events'
 DATA_RETENTION_TIME_IN_DAYS = 1;  -- Shorter retention for staging
 
 -- Display table structure
 DESCRIBE TABLE STG_BADGE_EVENTS;
 
--- ============================================================================
--- DESIGN NOTES
--- ============================================================================
--- 
--- TRANSIENT TABLE:
---   - Used for intermediate, rebuildable data
---   - No 7-day Fail-safe period = significant cost savings
---   - Can be fully reconstructed from RAW_BADGE_EVENTS
---   - Ideal for ETL staging layers
--- 
--- DATA RETENTION:
---   - Set to 1 day (sufficient for operational recovery)
---   - Can be set to 0 if historical staging data not needed
---   - Reduces storage costs for high-volume ingestion
--- 
--- DEDUPLICATION:
---   - Task will use QUALIFY with ROW_NUMBER() to deduplicate
---   - Partitioned by (badge_id, event_timestamp)
---   - Keeps most recent ingestion_time per duplicate
--- ============================================================================
-
+/*******************************************************************************
+ * USAGE NOTES
+ * 
+ * This table is populated by sfe_raw_to_staging_task which:
+ *   1. Reads from sfe_badge_events_stream
+ *   2. Deduplicates using QUALIFY ROW_NUMBER()
+ *   3. Inserts only unique badge_id + event_timestamp combinations
+ * 
+ * Table is TRANSIENT because:
+ *   - Can be rebuilt from RAW_BADGE_EVENTS if needed
+ *   - No Fail-safe period = lower storage costs
+ *   - 1-day Time Travel for operational recovery
+ ******************************************************************************/

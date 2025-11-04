@@ -37,7 +37,7 @@
 3. Copy/paste the entire contents of `sql/00_git_setup/01_git_repository_setup.sql`
 4. Click **Run All** (▶▶)
 
-**Note:** The repository URL is pre-configured to `https://github.com/sfc-gh-miwhitaker/simple-stream` - no changes needed!
+**Note:** The repository URL is pre-configured to `https://github.com/sfc-gh-miwhitaker/sfe-simple-stream` - no changes needed! The `sfe-` prefix helps identify this as a demo project.
 
 **Expected output:**
 ```

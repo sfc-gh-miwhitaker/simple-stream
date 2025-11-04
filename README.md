@@ -1,8 +1,13 @@
 # Simple Stream
 
-A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RFID badge tracking as an example. Run the entire demo from your browser with **zero local setup**.
+⚠️ **DEMO PROJECT - NOT FOR PRODUCTION USE**
 
-**📦 Repository:** [https://github.com/sfc-gh-miwhitaker/simple-stream](https://github.com/sfc-gh-miwhitaker/simple-stream)
+A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RFID badge tracking as an example. This is a reference implementation for educational purposes only.
+
+**📦 Repository:** [https://github.com/sfc-gh-miwhitaker/sfe-simple-stream](https://github.com/sfc-gh-miwhitaker/sfe-simple-stream)
+
+**🗄️ Database:** All artifacts created in `SNOWFLAKE_EXAMPLE` database  
+**🏷️ Isolation:** Uses `SFE_` prefix for account-level objects to prevent production collision
 
 ## 🚀 Get Started in 5 Minutes (Browser Only)
 
@@ -22,6 +27,41 @@ A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RF
 **That's it!** Data flows: Raw → Staging → Analytics (via Streams & Tasks). Query in <10 seconds.
 
 See [`docs/REST_API_GUIDE.md`](docs/REST_API_GUIDE.md) for complete API reference and error handling.
+
+---
+
+## Objects Created by This Demo
+
+### Account-Level Objects (Require ACCOUNTADMIN)
+
+| Object Type | Name | Purpose |
+|-------------|------|---------|
+| API Integration | `SFE_GIT_API_INTEGRATION` | GitHub repository access for public repo cloning |
+| Warehouse | `SFE_SIMPLE_STREAM_WH` | Dedicated demo compute for cost isolation |
+
+### Database Objects (in SNOWFLAKE_EXAMPLE)
+
+| Schema | Object Type | Name | Purpose |
+|--------|-------------|------|---------|
+| `DEMO_REPO` | Git Repository | `sfe_simple_stream_repo` | Code repository (read-only clone from sfe-simple-stream) |
+| `DEMO_REPO` | Secret | `SFE_SS_ACCOUNT` | Snowflake account identifier |
+| `DEMO_REPO` | Secret | `SFE_SS_USER` | Username for JWT authentication |
+| `DEMO_REPO` | Secret | `SFE_SS_JWT_KEY` | JWT private key (RSA) |
+| `DEMO_REPO` | Procedure | `SFE_DEPLOY_PIPELINE()` | Automated deployment from Git |
+| `DEMO_REPO` | Procedure | `SFE_VALIDATE_PIPELINE()` | Pipeline health check |
+| `DEMO_REPO` | Procedure | `SFE_RESET_PIPELINE()` | Clean teardown for re-deployment |
+| `RAW_INGESTION` | Table | `RAW_BADGE_EVENTS` | Snowpipe Streaming target table |
+| `RAW_INGESTION` | Pipe | `sfe_badge_events_pipe` | REST API ingestion endpoint |
+| `RAW_INGESTION` | Stream | `sfe_badge_events_stream` | CDC stream for badge events |
+| `RAW_INGESTION` | Task | `sfe_raw_to_staging_task` | Incremental ETL: Raw → Staging |
+| `STAGING_LAYER` | Table | `STG_BADGE_EVENTS` | Cleaned and deduplicated events |
+| `STAGING_LAYER` | Task | `sfe_staging_to_analytics_task` | Incremental ETL: Staging → Analytics |
+| `ANALYTICS_LAYER` | Table | `DIM_USERS` | User dimension (Type 2 SCD) |
+| `ANALYTICS_LAYER` | Table | `DIM_ZONES` | Zone dimension |
+| `ANALYTICS_LAYER` | Table | `DIM_READERS` | Badge reader dimension |
+| `ANALYTICS_LAYER` | Table | `FCT_ACCESS_EVENTS` | Access event fact table |
+
+> **Note:** All object names with generic terms use the `SFE_` prefix (SnowFlake Example) to prevent collision with production resources. Domain-specific names (like `RAW_BADGE_EVENTS`) don't require the prefix.
 
 ---
 
@@ -256,13 +296,13 @@ Since you're using a read-only clone of the public repository, you can easily fe
 ```sql
 -- Fetch latest changes from GitHub
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA GIT_REPOS;
-ALTER GIT REPOSITORY simple_stream_repo FETCH;
+USE SCHEMA DEMO_REPO;
+ALTER GIT REPOSITORY sfe_simple_stream_repo FETCH;
 
 -- Verify you have the latest files
 SELECT * FROM TABLE(
   LIST_GIT_REPOSITORY_FILES(
-    repository => 'SNOWFLAKE_EXAMPLE.GIT_REPOS.simple_stream_repo',
+    repository => 'SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo',
     ref => 'main'
   )
 )
@@ -271,20 +311,48 @@ ORDER BY file_path;
 
 After fetching updates, you can re-deploy using:
 ```sql
-CALL SNOWFLAKE_EXAMPLE.GIT_REPOS.DEPLOY_PIPELINE();
+CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_DEPLOY_PIPELINE();
 ```
 
-## Cleanup
+## Complete Cleanup
 
-To remove all deployed resources:
+To remove all demo artifacts:
 
 ```sql
--- Complete teardown (drops all objects)
+-- Execute teardown script (drops all objects except database)
 -- Copy/paste contents of sql/99_cleanup/teardown_all.sql
 
--- Stop tasks only (preserve data)
--- Copy/paste contents of sql/99_cleanup/teardown_tasks_only.sql
+-- Or use stored procedure:
+CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_RESET_PIPELINE();
+
+-- Manual cleanup (if needed):
+DROP DATABASE IF EXISTS SNOWFLAKE_EXAMPLE CASCADE;
+DROP WAREHOUSE IF EXISTS SFE_SIMPLE_STREAM_WH;
+DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
 ```
+
+**What gets removed:**
+- All tasks (`sfe_*_task`)
+- All streams (`sfe_*_stream`)
+- All pipes (`sfe_*_pipe`)
+- All tables and views
+- All schemas (except `DEMO_REPO` which contains Git repo and procedures)
+- Warehouse `SFE_SIMPLE_STREAM_WH`
+- API Integration `SFE_GIT_API_INTEGRATION`
+
+**What's preserved for audit:**
+- Database `SNOWFLAKE_EXAMPLE` (can be dropped manually if desired)
+- Schema `DEMO_REPO` with Git repository and stored procedures
+
+**Verification:**
+```sql
+-- Should return no results:
+SHOW API INTEGRATIONS LIKE 'SFE_%';
+SHOW WAREHOUSES LIKE 'SFE_%';
+SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
+```
+
+**Time:** < 1 minute
 
 ## Performance Characteristics
 

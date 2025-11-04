@@ -1,21 +1,35 @@
--- ============================================================================
--- RFID Badge Tracking: Dimension Tables
--- ============================================================================
--- Purpose: Create dimension tables for the analytics layer implementing
---          Type 2 Slowly Changing Dimensions (SCD) for tracking changes
---          over time.
---
--- Tables:
---   - DIM_USERS: User attributes with SCD Type 2
---   - DIM_ZONES: Property layout (buildings, floors, zones, readers)
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Dimension Tables Creation
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create dimension tables for the analytics layer implementing Type 2
+ *   Slowly Changing Dimensions (SCD) for tracking changes over time.
+ * 
+ * OBJECTS CREATED:
+ *   - DIM_USERS: User attributes with SCD Type 2
+ *   - DIM_ZONES: Property layout (buildings, floors, zones, readers)
+ *   - DIM_READERS: Badge reader devices (optional - not in original scope)
+ * 
+ * KEY FEATURES:
+ *   - Type 2 SCD for user history tracking
+ *   - Hierarchical zone structure
+ *   - Sample seed data for testing
+ * 
+ * CLEANUP:
+ *   See sql/99_cleanup/teardown_all.sql for complete removal
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA ANALYTICS_BADGE_TRACKING;
+USE SCHEMA ANALYTICS_LAYER;
 
--- ============================================================================
--- DIM_USERS: User Dimension with Type 2 SCD
--- ============================================================================
+/*******************************************************************************
+ * DIM_USERS: User Dimension with Type 2 SCD
+ * 
+ * Tracks user attribute changes over time with effective date ranges
+ ******************************************************************************/
 
 CREATE OR REPLACE TABLE DIM_USERS (
     -- Surrogate key
@@ -44,14 +58,13 @@ CREATE OR REPLACE TABLE DIM_USERS (
     created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'User dimension with Type 2 SCD for tracking attribute changes over time';
+COMMENT = 'DEMO: sfe-simple-stream - User dimension with Type 2 SCD for tracking attribute changes';
 
--- Note: Snowflake uses automatic micro-partitioning for optimization
--- No explicit indexes needed - queries on user_id will be automatically optimized
-
--- ============================================================================
--- DIM_ZONES: Zone/Location Dimension
--- ============================================================================
+/*******************************************************************************
+ * DIM_ZONES: Zone/Location Dimension
+ * 
+ * Hierarchical location structure with reader information
+ ******************************************************************************/
 
 CREATE OR REPLACE TABLE DIM_ZONES (
     -- Surrogate key
@@ -85,14 +98,41 @@ CREATE OR REPLACE TABLE DIM_ZONES (
     created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
 )
-COMMENT = 'Zone and location dimension with reader information';
+COMMENT = 'DEMO: sfe-simple-stream - Zone and location dimension with reader information';
 
--- Note: Snowflake uses automatic micro-partitioning for optimization
--- No explicit indexes needed - queries on zone_id and reader_id will be automatically optimized
+/*******************************************************************************
+ * DIM_READERS: Badge Reader Dimension (Optional - Not in Original Scope)
+ * 
+ * This table is for reference but not populated in the demo
+ ******************************************************************************/
 
--- ============================================================================
--- Seed Dimension Data
--- ============================================================================
+CREATE OR REPLACE TABLE DIM_READERS (
+    -- Surrogate key
+    reader_key NUMBER AUTOINCREMENT PRIMARY KEY COMMENT 'Surrogate key for reader dimension',
+    
+    -- Natural key
+    reader_id VARCHAR(50) NOT NULL UNIQUE COMMENT 'Business key: Reader identifier',
+    
+    -- Reader attributes
+    reader_name VARCHAR(100) COMMENT 'Friendly name for reader',
+    reader_type VARCHAR(50) COMMENT 'ENTRY, EXIT, BIDIRECTIONAL',
+    manufacturer VARCHAR(50) COMMENT 'Device manufacturer',
+    model VARCHAR(50) COMMENT 'Device model',
+    firmware_version VARCHAR(20) COMMENT 'Firmware version',
+    
+    -- Status
+    is_online BOOLEAN DEFAULT TRUE COMMENT 'Is reader currently online',
+    last_heartbeat TIMESTAMP_NTZ COMMENT 'Last communication timestamp',
+    
+    -- Audit columns
+    created_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+    updated_timestamp TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+)
+COMMENT = 'DEMO: sfe-simple-stream - Badge reader device dimension (optional)';
+
+/*******************************************************************************
+ * Seed Dimension Data for Testing
+ ******************************************************************************/
 
 -- Insert sample users
 INSERT INTO DIM_USERS (user_id, user_name, user_type, department, clearance_level, is_active, is_current)
@@ -115,33 +155,48 @@ VALUES
     ('ZONE-CONF-3B', 'RDR-301', 'Main Building', 3, 'Conference Room 3B', 'CONFERENCE_ROOM', 20, NULL, FALSE, 'Floor 3 West', 'ENTRY'),
     ('ZONE-PARKING-1', 'RDR-P01', 'Parking Structure', 1, 'Employee Parking Level 1', 'PARKING', 200, NULL, FALSE, 'Garage Entry', 'ENTRY');
 
--- Display table structures and sample data
+/*******************************************************************************
+ * Verification Queries
+ ******************************************************************************/
+
+-- Display table structures
 DESCRIBE TABLE DIM_USERS;
 DESCRIBE TABLE DIM_ZONES;
+DESCRIBE TABLE DIM_READERS;
 
 -- Verify seed data loaded
 SELECT COUNT(*) AS user_count FROM DIM_USERS;
 SELECT COUNT(*) AS zone_count FROM DIM_ZONES;
 
--- ============================================================================
--- TYPE 2 SCD NOTES
--- ============================================================================
--- 
--- The DIM_USERS table implements Type 2 SCD to track attribute changes:
--- 
--- When a user attribute changes:
---   1. Current record: Set is_current = FALSE, effective_end_date = NOW()
---   2. New record: Insert with is_current = TRUE, effective_start_date = NOW()
--- 
--- Example query to get current users:
---   SELECT * FROM DIM_USERS WHERE is_current = TRUE;
--- 
--- Example query for point-in-time analysis:
---   SELECT * FROM DIM_USERS 
---   WHERE user_id = 'USR-001'
---     AND effective_start_date <= '2024-01-01'
---     AND (effective_end_date IS NULL OR effective_end_date > '2024-01-01');
--- 
--- The Task will implement MERGE logic to maintain this pattern.
--- ============================================================================
+-- Preview sample data
+SELECT * FROM DIM_USERS LIMIT 5;
+SELECT * FROM DIM_ZONES LIMIT 5;
 
+/*******************************************************************************
+ * TYPE 2 SCD IMPLEMENTATION NOTES
+ * 
+ * The DIM_USERS table implements Type 2 SCD to track attribute changes:
+ * 
+ * WHEN A USER ATTRIBUTE CHANGES:
+ *   1. Current record: Set is_current = FALSE, effective_end_date = NOW()
+ *   2. New record: Insert with is_current = TRUE, effective_start_date = NOW()
+ * 
+ * QUERY PATTERNS:
+ * 
+ * Get current users:
+ *   SELECT * FROM DIM_USERS WHERE is_current = TRUE;
+ * 
+ * Point-in-time analysis (who was USR-001 on Jan 1, 2024?):
+ *   SELECT * FROM DIM_USERS 
+ *   WHERE user_id = 'USR-001'
+ *     AND effective_start_date <= '2024-01-01'
+ *     AND (effective_end_date IS NULL OR effective_end_date > '2024-01-01');
+ * 
+ * Full history for a user:
+ *   SELECT * FROM DIM_USERS 
+ *   WHERE user_id = 'USR-001'
+ *   ORDER BY effective_start_date;
+ * 
+ * The Task (sfe_staging_to_analytics_task) implements MERGE logic to maintain
+ * this pattern automatically.
+ ******************************************************************************/

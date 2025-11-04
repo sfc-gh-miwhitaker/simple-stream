@@ -1,21 +1,28 @@
--- ============================================================================
--- RFID Badge Tracking: Monitoring Views
--- ============================================================================
--- Purpose: Create comprehensive monitoring views for tracking ingestion
---          health, performance, and data quality across the pipeline.
---
--- Views:
---   1. V_CHANNEL_STATUS: Real-time channel health
---   2. V_INGESTION_METRICS: Throughput and volume metrics
---   3. V_END_TO_END_LATENCY: Pipeline latency tracking
---   4. V_DATA_FRESHNESS: Last event timestamps
---   5. V_PARTITION_EFFICIENCY: Query performance metrics
---   6. V_STREAMING_COSTS: Cost tracking
---   7. V_TASK_EXECUTION_HISTORY: Task performance
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Monitoring Views
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create comprehensive monitoring views for tracking ingestion health,
+ *   performance, and data quality across the pipeline.
+ * 
+ * VIEWS CREATED:
+ *   1. V_CHANNEL_STATUS: Real-time channel health
+ *   2. V_INGESTION_METRICS: Throughput and volume metrics
+ *   3. V_END_TO_END_LATENCY: Pipeline latency tracking
+ *   4. V_DATA_FRESHNESS: Last event timestamps
+ *   5. V_PARTITION_EFFICIENCY: Query performance metrics
+ *   6. V_STREAMING_COSTS: Cost tracking
+ *   7. V_TASK_EXECUTION_HISTORY: Task performance
+ * 
+ * CLEANUP:
+ *   See sql/99_cleanup/teardown_all.sql for complete removal
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
-USE SCHEMA STAGE_BADGE_TRACKING;
+USE SCHEMA RAW_INGESTION;
 
 -- ============================================================================
 -- View 1: Channel Status
@@ -34,12 +41,12 @@ SELECT
     MAX(rows_inserted) AS max_rows_per_insert
 FROM TABLE(
     SNOWFLAKE.INFORMATION_SCHEMA.CHANNEL_HISTORY(
-        PIPE_NAME => 'SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.BADGE_EVENTS_PIPE',
+        PIPE_NAME => 'SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe',
         TIME_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP())
     )
 )
 GROUP BY channel_name, pipe_name
-COMMENT = 'Real-time Snowpipe Streaming channel health and status';
+COMMENT = 'DEMO: sfe-simple-stream - Real-time Snowpipe Streaming channel health';
 
 -- ============================================================================
 -- View 2: Ingestion Metrics
@@ -74,7 +81,7 @@ SELECT
     entry_count - exit_count AS net_occupancy_change
 FROM hourly_stats
 ORDER BY ingestion_hour DESC
-COMMENT = 'Hourly ingestion metrics for the last 24 hours';
+COMMENT = 'DEMO: sfe-simple-stream - Hourly ingestion metrics for the last 24 hours';
 
 -- ============================================================================
 -- View 3: End-to-End Latency
@@ -95,7 +102,7 @@ WITH latest_events AS (
         'STAGING' AS layer,
         MAX(staging_time) AS last_update,
         COUNT(*) AS row_count
-    FROM SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS
+    FROM SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS
     WHERE staging_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())
     
     UNION ALL
@@ -104,7 +111,7 @@ WITH latest_events AS (
         'ANALYTICS' AS layer,
         MAX(fact_load_time) AS last_update,
         COUNT(*) AS row_count
-    FROM SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
+    FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
     WHERE fact_load_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())
 )
 SELECT 
@@ -124,7 +131,7 @@ ORDER BY
         WHEN 'STAGING' THEN 2
         WHEN 'ANALYTICS' THEN 3
     END
-COMMENT = 'End-to-end pipeline latency and health status';
+COMMENT = 'DEMO: sfe-simple-stream - End-to-end pipeline latency and health status';
 
 -- ============================================================================
 -- View 4: Data Freshness
@@ -151,8 +158,8 @@ SELECT
     DATEDIFF('second', MAX(fact_load_time), CURRENT_TIMESTAMP()) AS ingestion_age_seconds,
     COUNT(*) AS total_rows,
     COUNT(*) FILTER (WHERE fact_load_time >= DATEADD('hour', -1, CURRENT_TIMESTAMP())) AS rows_last_hour
-FROM SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS
-COMMENT = 'Data freshness metrics across all layers';
+FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS
+COMMENT = 'DEMO: sfe-simple-stream - Data freshness metrics across all layers';
 
 -- ============================================================================
 -- View 5: Partition Efficiency
@@ -187,7 +194,7 @@ SELECT
     END AS pruning_efficiency
 FROM table_scan_stats
 GROUP BY table_name
-COMMENT = 'Query pruning efficiency - lower scan ratio is better';
+COMMENT = 'DEMO: sfe-simple-stream - Query pruning efficiency - lower scan ratio is better';
 
 -- ============================================================================
 -- View 6: Streaming Costs (Throughput-Based Pricing)
@@ -201,7 +208,7 @@ WITH daily_throughput AS (
         SUM(rows_inserted) AS rows_ingested
     FROM TABLE(
         SNOWFLAKE.INFORMATION_SCHEMA.CHANNEL_HISTORY(
-            PIPE_NAME => 'SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.BADGE_EVENTS_PIPE',
+            PIPE_NAME => 'SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe',
             TIME_RANGE_START => DATEADD('day', -30, CURRENT_TIMESTAMP())
         )
     )
@@ -215,7 +222,7 @@ SELECT
     ROUND(rows_ingested / NULLIF(gb_ingested_uncompressed, 0), 0) AS rows_per_gb
 FROM daily_throughput
 ORDER BY ingestion_date DESC
-COMMENT = 'Snowpipe Streaming cost tracking (est. $0.01 per GB uncompressed)';
+COMMENT = 'DEMO: sfe-simple-stream - Snowpipe Streaming cost tracking (est. $0.01 per GB uncompressed)';
 
 -- ============================================================================
 -- View 7: Task Execution History
@@ -244,13 +251,13 @@ FROM TABLE(
 )
 WHERE database_name = 'SNOWFLAKE_EXAMPLE'
 ORDER BY scheduled_time DESC
-COMMENT = 'Task execution history for the last 24 hours';
+COMMENT = 'DEMO: sfe-simple-stream - Task execution history for the last 24 hours';
 
 -- ============================================================================
 -- Verify view creation
 -- ============================================================================
 
-SHOW VIEWS IN SCHEMA STAGE_BADGE_TRACKING;
+SHOW VIEWS LIKE 'V_%' IN SCHEMA RAW_INGESTION;
 
 -- ============================================================================
 -- USAGE EXAMPLES

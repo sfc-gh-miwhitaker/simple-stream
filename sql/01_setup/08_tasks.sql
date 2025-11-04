@@ -1,48 +1,65 @@
--- ============================================================================
--- RFID Badge Tracking: Tasks for CDC-based Transformation Pipeline
--- ============================================================================
--- Purpose: Create scheduled tasks that process badge events through the
---          pipeline using stream-based CDC triggers.
---
--- Task Chain:
---   1. raw_to_staging_task: RAW → STG (deduplication with QUALIFY)
---   2. staging_to_analytics_task: STG → ANALYTICS (MERGE, SCD updates)
---
--- Key Features:
---   - Event-driven execution (SYSTEM$STREAM_HAS_DATA)
---   - 1-minute schedule for near-real-time processing
---   - QUALIFY for efficient deduplication
---   - Type 2 SCD maintenance
---   - Automatic warehouse management
--- ============================================================================
+/*******************************************************************************
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Tasks for CDC-based Transformation Pipeline
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create scheduled tasks that process badge events through the pipeline using
+ *   stream-based CDC triggers. Demonstrates event-driven ETL pattern.
+ * 
+ * OBJECTS CREATED:
+ *   - SFE_SIMPLE_STREAM_WH (Warehouse) - Dedicated task execution warehouse
+ *   - sfe_raw_to_staging_task (Task) - RAW → STAGING with deduplication
+ *   - sfe_process_badge_events (Procedure) - Analytics layer processing
+ *   - sfe_staging_to_analytics_task (Task) - STAGING → ANALYTICS
+ * 
+ * TASK CHAIN:
+ *   1. sfe_raw_to_staging_task: RAW → STG (deduplication with QUALIFY)
+ *   2. sfe_staging_to_analytics_task: STG → ANALYTICS (MERGE, SCD updates)
+ * 
+ * KEY FEATURES:
+ *   - Event-driven execution (SYSTEM$STREAM_HAS_DATA)
+ *   - 1-minute schedule for near-real-time processing
+ *   - QUALIFY for efficient deduplication
+ *   - Type 2 SCD maintenance
+ *   - Automatic warehouse management
+ * 
+ * CLEANUP:
+ *   See sql/99_cleanup/teardown_all.sql for complete removal
+ ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
--- ============================================================================
--- Create warehouse for task execution (if not exists)
--- ============================================================================
+/*******************************************************************************
+ * Create Dedicated Warehouse for Task Execution
+ * 
+ * SFE_SIMPLE_STREAM_WH isolates demo compute costs from production
+ ******************************************************************************/
 
-CREATE WAREHOUSE IF NOT EXISTS etl_wh
+CREATE WAREHOUSE IF NOT EXISTS SFE_SIMPLE_STREAM_WH
 WITH WAREHOUSE_SIZE = 'XSMALL'
      AUTO_SUSPEND = 60  -- Suspend after 1 minute of inactivity
      AUTO_RESUME = TRUE
-     INITIALLY_SUSPENDED = TRUE;
+     INITIALLY_SUSPENDED = TRUE
+     COMMENT = 'DEMO: sfe-simple-stream - Dedicated warehouse for task execution';
 
-COMMENT ON WAREHOUSE etl_wh IS 'Warehouse for ETL task execution';
+/*******************************************************************************
+ * Task 1: Raw to Staging (Deduplication)
+ * 
+ * Reads from sfe_badge_events_stream and deduplicates using QUALIFY
+ ******************************************************************************/
 
--- ============================================================================
--- Task 1: Raw to Staging (Deduplication)
--- ============================================================================
+USE SCHEMA RAW_INGESTION;
 
-USE SCHEMA STAGE_BADGE_TRACKING;
-
-CREATE OR REPLACE TASK raw_to_staging_task
-    WAREHOUSE = etl_wh
+CREATE OR REPLACE TASK sfe_raw_to_staging_task
+    WAREHOUSE = SFE_SIMPLE_STREAM_WH
     SCHEDULE = '1 MINUTE'
+    COMMENT = 'DEMO: sfe-simple-stream - Incremental ETL: RAW → STAGING with deduplication'
 WHEN
-    SYSTEM$STREAM_HAS_DATA('raw_badge_events_stream')
+    SYSTEM$STREAM_HAS_DATA('sfe_badge_events_stream')
 AS
-    INSERT INTO SNOWFLAKE_EXAMPLE.TRANSFORM_BADGE_TRACKING.STG_BADGE_EVENTS (
+    INSERT INTO SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS (
         badge_id,
         user_id,
         zone_id,
@@ -63,32 +80,34 @@ AS
         signal_quality,
         direction,
         ingestion_time
-    FROM raw_badge_events_stream
+    FROM sfe_badge_events_stream
     WHERE METADATA$ACTION = 'INSERT'
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY badge_id, event_timestamp 
         ORDER BY ingestion_time DESC
     ) = 1;
 
--- ============================================================================
--- Task 2: Staging to Analytics (Dimension and Fact Updates)
--- ============================================================================
--- Note: Must be in same schema as predecessor task (STAGE_BADGE_TRACKING)
+/*******************************************************************************
+ * Stored Procedure: Process Badge Events to Analytics
+ * 
+ * Encapsulates multi-step processing for reuse in tasks.
+ * SFE_ prefix prevents collision with production procedures.
+ ******************************************************************************/
 
-USE SCHEMA STAGE_BADGE_TRACKING;
+USE SCHEMA STAGING_LAYER;
 
--- Stored procedure encapsulating multi-step processing for reuse in tasks
-CREATE OR REPLACE PROCEDURE process_badge_events()
+CREATE OR REPLACE PROCEDURE sfe_process_badge_events()
 RETURNS VARCHAR
 LANGUAGE SQL
 EXECUTE AS OWNER
+COMMENT = 'DEMO: sfe-simple-stream - Process staging data into analytics layer (dimensions + facts)'
 AS
 $$
 BEGIN
     -- ========================================================================
     -- Step 1: Update DIM_USERS if new users appear (simplified - no SCD for now)
     -- ========================================================================
-    MERGE INTO SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.DIM_USERS d
+    MERGE INTO SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_USERS d
     USING (
         SELECT DISTINCT 
             user_id,
@@ -96,9 +115,9 @@ BEGIN
             'UNKNOWN' AS user_type,
             'UNKNOWN' AS department,
             'PUBLIC' AS clearance_level
-        FROM STG_BADGE_EVENTS
+        FROM SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS
         WHERE user_id NOT IN (
-            SELECT user_id FROM SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.DIM_USERS
+            SELECT user_id FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_USERS
             WHERE is_current = TRUE
         )
     ) s
@@ -116,7 +135,7 @@ BEGIN
     -- ========================================================================
     -- Step 2: Insert into Fact Table
     -- ========================================================================
-    INSERT INTO SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS (
+    INSERT INTO SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS (
         user_key,
         zone_key,
         badge_id,
@@ -157,12 +176,12 @@ BEGIN
             ELSE FALSE 
         END AS is_weekend,
         s.ingestion_time
-    FROM STG_BADGE_EVENTS s
-    INNER JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.DIM_USERS u
+    FROM SNOWFLAKE_EXAMPLE.STAGING_LAYER.STG_BADGE_EVENTS s
+    INNER JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_USERS u
         ON s.user_id = u.user_id AND u.is_current = TRUE
-    INNER JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.DIM_ZONES z
+    INNER JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_ZONES z
         ON s.zone_id = z.zone_id
-    LEFT JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_BADGE_TRACKING.FCT_ACCESS_EVENTS f
+    LEFT JOIN SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.FCT_ACCESS_EVENTS f
         ON s.badge_id = f.badge_id 
         AND s.event_timestamp = f.event_timestamp
     WHERE f.event_key IS NULL;  -- Prevent duplicates
@@ -171,78 +190,84 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE TASK staging_to_analytics_task
-    WAREHOUSE = etl_wh
-    AFTER raw_to_staging_task
+/*******************************************************************************
+ * Task 2: Staging to Analytics (Dimension and Fact Updates)
+ * 
+ * Runs after sfe_raw_to_staging_task completes
+ ******************************************************************************/
+
+CREATE OR REPLACE TASK sfe_staging_to_analytics_task
+    WAREHOUSE = SFE_SIMPLE_STREAM_WH
+    AFTER sfe_raw_to_staging_task
+    COMMENT = 'DEMO: sfe-simple-stream - Incremental ETL: STAGING → ANALYTICS'
 AS
-    CALL process_badge_events();
+    CALL sfe_process_badge_events();
 
--- ============================================================================
--- Resume tasks to activate them
--- ============================================================================
+/*******************************************************************************
+ * Resume Tasks to Activate Them
+ * 
+ * Resume in reverse dependency order (child first, parent second)
+ ******************************************************************************/
 
--- Resume tasks in reverse dependency order (child first, parent second)
-ALTER TASK staging_to_analytics_task RESUME;
-ALTER TASK SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.raw_to_staging_task RESUME;
+ALTER TASK sfe_staging_to_analytics_task RESUME;
+ALTER TASK SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_raw_to_staging_task RESUME;
 
 -- Verify task configuration
-SHOW TASKS IN DATABASE SNOWFLAKE_EXAMPLE;
+SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
 
--- ============================================================================
--- TASK MONITORING
--- ============================================================================
--- 
--- Check task status:
---   SHOW TASKS IN DATABASE SNOWFLAKE_EXAMPLE;
--- 
--- View task execution history:
---   SELECT *
---   FROM TABLE(INFORMATION_SCHEMA.TASK_HISTORY(
---       SCHEDULED_TIME_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP()),
---       RESULT_LIMIT => 100
---   ))
---   ORDER BY SCHEDULED_TIME DESC;
--- 
--- Check specific task runs:
---   SELECT 
---       name,
---       state,
---       scheduled_time,
---       completed_time,
---       DATEDIFF('second', scheduled_time, completed_time) AS duration_sec,
---       error_code,
---       error_message
---   FROM TABLE(INFORMATION_SCHEMA.TASK_HISTORY())
---   WHERE name = 'RAW_TO_STAGING_TASK'
---   ORDER BY scheduled_time DESC
---   LIMIT 10;
--- 
--- Suspend tasks (for maintenance):
---   ALTER TASK raw_to_staging_task SUSPEND;
---   ALTER TASK staging_to_analytics_task SUSPEND;
--- 
--- Resume tasks:
---   ALTER TASK staging_to_analytics_task RESUME;
---   ALTER TASK raw_to_staging_task RESUME;
--- ============================================================================
+/*******************************************************************************
+ * TASK MONITORING
+ * 
+ * Check task status:
+ *   SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
+ * 
+ * View task execution history:
+ *   SELECT *
+ *   FROM TABLE(INFORMATION_SCHEMA.TASK_HISTORY(
+ *       SCHEDULED_TIME_RANGE_START => DATEADD('hour', -1, CURRENT_TIMESTAMP()),
+ *       RESULT_LIMIT => 100
+ *   ))
+ *   WHERE NAME LIKE 'sfe_%'
+ *   ORDER BY SCHEDULED_TIME DESC;
+ * 
+ * Check specific task runs:
+ *   SELECT 
+ *       name,
+ *       state,
+ *       scheduled_time,
+ *       completed_time,
+ *       DATEDIFF('second', scheduled_time, completed_time) AS duration_sec,
+ *       error_code,
+ *       error_message
+ *   FROM TABLE(INFORMATION_SCHEMA.TASK_HISTORY())
+ *   WHERE name = 'sfe_raw_to_staging_task'
+ *   ORDER BY scheduled_time DESC
+ *   LIMIT 10;
+ * 
+ * Suspend tasks (for maintenance):
+ *   ALTER TASK sfe_raw_to_staging_task SUSPEND;
+ *   ALTER TASK sfe_staging_to_analytics_task SUSPEND;
+ * 
+ * Resume tasks:
+ *   ALTER TASK sfe_staging_to_analytics_task RESUME;
+ *   ALTER TASK sfe_raw_to_staging_task RESUME;
+ ******************************************************************************/
 
--- ============================================================================
--- PERFORMANCE TUNING
--- ============================================================================
--- 
--- If tasks are running slowly:
---   1. Increase warehouse size:
---      ALTER WAREHOUSE etl_wh SET WAREHOUSE_SIZE = 'SMALL';
---   
---   2. Adjust auto-suspend to keep warehouse warm:
---      ALTER WAREHOUSE etl_wh SET AUTO_SUSPEND = 300;  -- 5 minutes
---   
---   3. Consider batch processing (5-minute schedule instead of 1-minute):
---      ALTER TASK raw_to_staging_task SET SCHEDULE = '5 MINUTE';
---   
---   4. Monitor warehouse usage:
---      SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
---      WHERE WAREHOUSE_NAME = 'ETL_WH'
---      ORDER BY START_TIME DESC;
--- ============================================================================
-
+/*******************************************************************************
+ * PERFORMANCE TUNING
+ * 
+ * If tasks are running slowly:
+ *   1. Increase warehouse size:
+ *      ALTER WAREHOUSE SFE_SIMPLE_STREAM_WH SET WAREHOUSE_SIZE = 'SMALL';
+ *   
+ *   2. Adjust auto-suspend to keep warehouse warm:
+ *      ALTER WAREHOUSE SFE_SIMPLE_STREAM_WH SET AUTO_SUSPEND = 300;  -- 5 minutes
+ *   
+ *   3. Consider batch processing (5-minute schedule instead of 1-minute):
+ *      ALTER TASK sfe_raw_to_staging_task SET SCHEDULE = '5 MINUTE';
+ *   
+ *   4. Monitor warehouse usage:
+ *      SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
+ *      WHERE WAREHOUSE_NAME = 'SFE_SIMPLE_STREAM_WH'
+ *      ORDER BY START_TIME DESC;
+ ******************************************************************************/

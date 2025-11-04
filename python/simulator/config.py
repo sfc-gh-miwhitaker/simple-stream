@@ -49,12 +49,12 @@ class Config:
     @property
     def snowflake_schema(self) -> str:
         """Snowflake schema name."""
-        return os.getenv("SNOWFLAKE_SCHEMA", "STAGE_BADGE_TRACKING")
+        return os.getenv("SNOWFLAKE_SCHEMA", "RAW_INGESTION")
     
     @property
     def snowflake_pipe(self) -> str:
         """Snowflake pipe name."""
-        return os.getenv("SNOWFLAKE_PIPE", "BADGE_EVENTS_PIPE")
+        return os.getenv("SNOWFLAKE_PIPE", "sfe_badge_events_pipe")
     
     @property
     def private_key_path(self) -> str:
