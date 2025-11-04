@@ -20,7 +20,41 @@ A Snowflake-native demonstration of the **Snowpipe Streaming REST API** using RF
 ✅ Credentials stored in Snowflake Secrets  
 ✅ Simulator runs in Snowflake Notebooks  
 
-👉 **[Start Here: QUICKSTART.md](QUICKSTART.md)**
+### Quick Start (First Time Setup)
+
+**Step 1: One-Time API Integration Setup** (30 seconds, ACCOUNTADMIN required)
+
+Before you can connect Git repositories in Snowsight, you need to create an API Integration. This is a **one-time account-level setup** that can be reused across all demo projects.
+
+```sql
+-- Run this once per Snowflake account (requires ACCOUNTADMIN)
+USE ROLE ACCOUNTADMIN;
+
+CREATE OR REPLACE API INTEGRATION SFE_GIT_API_INTEGRATION
+  API_PROVIDER = git_https_api
+  API_ALLOWED_PREFIXES = ('https://github.com/')
+  ENABLED = TRUE
+  COMMENT = 'DEMO: GitHub integration for public repository access';
+```
+
+✅ **Already have `SFE_GIT_API_INTEGRATION`?** Skip to Step 2!
+
+**Step 2: Create Git Workspace in Snowsight UI** (30 seconds)
+
+1. Go to **Projects → Workspaces** → Click **"+ Workspace"** → Select **"From Git repository"**
+2. Fill in the form:
+   - **Repository URL:** `https://github.com/sfc-gh-miwhitaker/sfe-simple-stream`
+   - **Workspace Name:** `sfe-simple-stream`
+   - **API Integration:** `SFE_GIT_API_INTEGRATION` (from Step 1)
+   - **Authentication:** No authentication (public repo)
+   - **Branch:** `main`
+3. Click **"Create"**
+
+✅ **Done!** Your workspace now has all SQL scripts, notebooks, and docs.
+
+**Step 3: Deploy & Run** (4 minutes)
+
+👉 **[Continue with: QUICKSTART.md](QUICKSTART.md)** for the complete deployment steps.
 
 ---
 
@@ -321,37 +355,47 @@ CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_DEPLOY_PIPELINE();
 To remove all demo artifacts:
 
 ```sql
--- Execute teardown script (drops all objects except database)
--- Copy/paste contents of sql/99_cleanup/teardown_all.sql
+-- Execute teardown script (drops all objects except database and API integration)
+-- Run: sql/99_cleanup/teardown_all.sql
 
--- Or use stored procedure:
+-- Or use stored procedure (if it exists):
 CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_RESET_PIPELINE();
-
--- Manual cleanup (if needed):
-DROP DATABASE IF EXISTS SNOWFLAKE_EXAMPLE CASCADE;
-DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
 ```
 
 **What gets removed:**
-- All tasks (`sfe_*_task`)
-- All streams (`sfe_*_stream`)
-- All pipes (`sfe_*_pipe`)
-- All tables and views
-- All schemas (except `DEMO_REPO` which contains Git repo and procedures)
-- API Integration `SFE_GIT_API_INTEGRATION`
+- ✅ All schemas (RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER, DEMO_REPO) with CASCADE
+- ✅ All contained objects (tables, views, streams, pipes, functions, procedures, secrets, Git repo)
+- ✅ All tasks (after proper suspension)
+- ✅ Project-specific warehouse (SFE_SIMPLE_STREAM_WH)
 
-**Note:** No warehouse cleanup needed - tasks use serverless compute
+**What's intentionally preserved:**
+- ✅ `SNOWFLAKE_EXAMPLE` database (per cleanup rule)
+- ✅ `SFE_GIT_API_INTEGRATION` (shared across demo projects, can be reused)
 
-**What's preserved for audit:**
-- Database `SNOWFLAKE_EXAMPLE` (can be dropped manually if desired)
-- Schema `DEMO_REPO` with Git repository and stored procedures
+**Why preserve the API Integration?**
+- One-time setup with ACCOUNTADMIN privileges
+- Can be safely shared across multiple demo projects
+- No ongoing cost or security risk
+- Avoids needing to re-create it for each demo
+
+**To manually remove the API Integration (optional):**
+```sql
+-- Only run if you want to completely remove all traces
+USE ROLE ACCOUNTADMIN;
+DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
+DROP DATABASE IF EXISTS SNOWFLAKE_EXAMPLE CASCADE;
+```
 
 **Verification:**
 ```sql
--- Should return no results:
-SHOW API INTEGRATIONS LIKE 'SFE_%';
-SHOW WAREHOUSES LIKE 'SFE_%';
-SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
+-- Verify warehouse was removed (should return no results):
+SHOW WAREHOUSES LIKE 'SFE_SIMPLE_STREAM%';
+
+-- Verify API Integration still exists (should show 1 result):
+SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
+
+-- Verify demo schemas were removed (should only show INFORMATION_SCHEMA and PUBLIC):
+SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
 ```
 
 **Time:** < 1 minute

@@ -42,6 +42,15 @@
  ******************************************************************************/
 
 USE ROLE ACCOUNTADMIN;
+
+-- Create database and schema if they don't exist yet
+-- (These may already exist if you created the Git workspace in the UI)
+CREATE DATABASE IF NOT EXISTS SNOWFLAKE_EXAMPLE
+  COMMENT = 'DEMO: Repository for example/demo projects - NOT FOR PRODUCTION';
+
+CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO
+  COMMENT = 'DEMO: sfe-simple-stream - Git repository and secrets';
+
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA DEMO_REPO;
 
