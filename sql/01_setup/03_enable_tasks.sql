@@ -34,6 +34,15 @@
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA RAW_INGESTION;
 
+-- ============================================================================
+-- IMPORTANT: Suspend root task first if re-running this script
+-- ============================================================================
+-- When re-running, the root task may already be started. We must suspend it
+-- before creating/modifying any child tasks in the DAG.
+
+ALTER TASK IF EXISTS sfe_raw_to_staging_task SUSPEND;
+CALL SYSTEM$WAIT(2);
+
 CREATE OR REPLACE TASK sfe_raw_to_staging_task
     SCHEDULE = '1 MINUTE'
     COMMENT = 'DEMO: sfe-simple-stream - RAW to STAGING dedupe task'
@@ -163,8 +172,20 @@ AS
     CALL SNOWFLAKE_EXAMPLE.STAGING_LAYER.sfe_process_badge_events();
 
 -- ============================================================================
--- STEP 4: Resume Tasks (Child First, Then Parent)
+-- STEP 4: Ensure Tasks Are Suspended, Then Resume in Correct Order
 -- ============================================================================
+-- Per Snowflake docs: "Before resuming the root task, resume all child tasks"
+-- If re-running this script, tasks may already be started, so suspend them first
 
+-- Ensure both tasks are suspended (safe for new or existing tasks)
+ALTER TASK IF EXISTS sfe_staging_to_analytics_task SUSPEND;
+ALTER TASK IF EXISTS sfe_raw_to_staging_task SUSPEND;
+
+-- Wait for any running executions to complete
+CALL SYSTEM$WAIT(2);
+
+-- Resume child task first (while root is still suspended)
 ALTER TASK sfe_staging_to_analytics_task RESUME;
+
+-- Resume root/parent task LAST (this activates the entire DAG)
 ALTER TASK sfe_raw_to_staging_task RESUME;

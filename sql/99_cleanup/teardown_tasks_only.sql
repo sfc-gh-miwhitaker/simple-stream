@@ -24,14 +24,17 @@ USE ROLE SYSADMIN;
 /*******************************************************************************
  * Suspend All Tasks
  * 
- * Must suspend child tasks first, then parent (reverse dependency order)
+ * Must suspend ROOT/PARENT task FIRST to stop the DAG
  ******************************************************************************/
 
--- Suspend child task first
-ALTER TASK IF EXISTS RAW_INGESTION.sfe_staging_to_analytics_task SUSPEND;
-
--- Suspend parent task
+-- Suspend ROOT/PARENT task FIRST (stops the entire DAG)
 ALTER TASK IF EXISTS RAW_INGESTION.sfe_raw_to_staging_task SUSPEND;
+
+-- Wait for root to suspend
+CALL SYSTEM$WAIT(2);
+
+-- Suspend child task (order doesn't matter once root is suspended)
+ALTER TASK IF EXISTS RAW_INGESTION.sfe_staging_to_analytics_task SUSPEND;
 
 -- Verify tasks are suspended
 SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
