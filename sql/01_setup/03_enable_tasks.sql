@@ -31,6 +31,12 @@
  * ESTIMATED TIME: 5 seconds
  ******************************************************************************/
 
+-- ============================================================================
+-- PREREQUISITE: Analytics layer must be complete
+-- ============================================================================
+-- Run sql/01_setup/02_analytics_layer.sql first
+
+USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA RAW_INGESTION;
 
@@ -176,6 +182,10 @@ AS
 -- ============================================================================
 -- Per Snowflake docs: "Before resuming the root task, resume all child tasks"
 -- If re-running this script, tasks may already be started, so suspend them first
+
+USE ROLE SYSADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
+USE SCHEMA RAW_INGESTION;
 
 -- Ensure both tasks are suspended (safe for new or existing tasks)
 ALTER TASK IF EXISTS sfe_staging_to_analytics_task SUSPEND;

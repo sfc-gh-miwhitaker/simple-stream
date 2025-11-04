@@ -18,8 +18,8 @@
  * ESTIMATED TIME: 5 seconds
  ******************************************************************************/
 
-USE DATABASE SNOWFLAKE_EXAMPLE;
 USE ROLE SYSADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
 
 /*******************************************************************************
  * Suspend All Tasks

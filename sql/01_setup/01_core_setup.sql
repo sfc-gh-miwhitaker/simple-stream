@@ -31,8 +31,10 @@
  ******************************************************************************/
 
 -- ============================================================================
--- STEP 1: Create Database and Schemas
+-- STEP 1: Create Database and Schemas (as SYSADMIN)
 -- ============================================================================
+
+USE ROLE SYSADMIN;
 
 CREATE DATABASE IF NOT EXISTS SNOWFLAKE_EXAMPLE
     COMMENT = 'DEMO: Repository for example/demo projects - NOT FOR PRODUCTION';
@@ -105,6 +107,10 @@ COMMENT = 'DEMO: sfe-simple-stream - CDC stream for RAW_BADGE_EVENTS';
 -- ============================================================================
 -- VERIFICATION QUERIES
 -- ============================================================================
+
+USE ROLE SYSADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
+USE SCHEMA RAW_INGESTION;
 
 -- Verify database and schemas
 SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;

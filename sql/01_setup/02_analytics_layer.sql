@@ -27,6 +27,12 @@
  * ESTIMATED TIME: 15 seconds
  ******************************************************************************/
 
+-- ============================================================================
+-- PREREQUISITE: Core setup must be complete
+-- ============================================================================
+-- Run sql/01_setup/01_core_setup.sql first
+
+USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
 -- ============================================================================
@@ -170,6 +176,9 @@ CLUSTER BY (event_date);
 -- ============================================================================
 -- VERIFICATION QUERIES
 -- ============================================================================
+
+USE ROLE SYSADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
 
 -- Verify staging table
 DESCRIBE TABLE STAGING_LAYER.STG_BADGE_EVENTS;

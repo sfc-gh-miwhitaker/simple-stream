@@ -42,6 +42,9 @@ END;
 -- CASCADE will automatically drop all objects within the schema
 -- This eliminates the need to drop individual tables, views, streams, pipes, etc.
 
+USE ROLE SYSADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
+
 -- Unset database-level event table configuration first
 ALTER DATABASE IF EXISTS SNOWFLAKE_EXAMPLE UNSET EVENT_TABLE;
 
@@ -53,12 +56,13 @@ DROP SCHEMA IF EXISTS RAW_INGESTION CASCADE;
 -- ============================================================================
 -- STEP 3: Drop DEMO_REPO Schema with CASCADE
 -- ============================================================================
--- This requires ACCOUNTADMIN privileges and removes secrets, Git repo, procedures
+-- The schema is owned by SYSADMIN, but secrets require ACCOUNTADMIN to drop
+-- We switch to ACCOUNTADMIN to ensure we can drop secrets, then drop the schema
 
 USE ROLE ACCOUNTADMIN;
 
 -- Drop DEMO_REPO schema with CASCADE (removes all secrets, Git repo, procedures)
-DROP SCHEMA IF EXISTS DEMO_REPO CASCADE;
+DROP SCHEMA IF EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO CASCADE;
 
 -- ============================================================================
 -- STEP 4: Drop Warehouse (Keep API Integration for Reuse)
@@ -67,11 +71,15 @@ DROP SCHEMA IF EXISTS DEMO_REPO CASCADE;
 -- NOTE: API Integration (SFE_GIT_API_INTEGRATION) is intentionally preserved
 --       as it may be shared across multiple demo projects
 
+USE ROLE ACCOUNTADMIN;
+
 DROP WAREHOUSE IF EXISTS SFE_SIMPLE_STREAM_WH;
 
 -- ============================================================================
 -- VERIFICATION (Optional - run to confirm cleanup)
 -- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
 
 -- Verify API Integration still exists (should be preserved)
 SHOW API INTEGRATIONS LIKE 'SFE_GIT%';

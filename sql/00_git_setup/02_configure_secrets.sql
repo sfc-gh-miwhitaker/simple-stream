@@ -41,16 +41,14 @@
  * ESTIMATED TIME: 2 minutes (includes key generation)
  ******************************************************************************/
 
+-- ============================================================================
+-- PREREQUISITE: Database and schema must exist
+-- ============================================================================
+-- Run sql/00_git_setup/01_git_repository_setup.sql first if not already done.
+-- This ensures SNOWFLAKE_EXAMPLE database is owned by SYSADMIN.
+
+-- Secrets require ACCOUNTADMIN to create
 USE ROLE ACCOUNTADMIN;
-
--- Create database and schema if they don't exist yet
--- (These may already exist if you created the Git workspace in the UI)
-CREATE DATABASE IF NOT EXISTS SNOWFLAKE_EXAMPLE
-  COMMENT = 'DEMO: Repository for example/demo projects - NOT FOR PRODUCTION';
-
-CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO
-  COMMENT = 'DEMO: sfe-simple-stream - Git repository and secrets';
-
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA DEMO_REPO;
 
@@ -170,7 +168,10 @@ MIIEvQIBADANBgkqhkiG9w0BAQEFAASC...
 -- ============================================================================
 --
 -- WARNING: This step is REQUIRED! Without these grants, the notebook cannot read secrets.
+-- ACCOUNTADMIN grants USAGE to SYSADMIN so notebooks can access these secrets.
 --
+
+USE ROLE ACCOUNTADMIN;
 
 GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT TO ROLE SYSADMIN;
 GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER TO ROLE SYSADMIN;
@@ -179,6 +180,10 @@ GRANT USAGE ON SECRET SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY TO ROLE SYSADMI
 -- ============================================================================
 -- STEP 7: Verification
 -- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE SNOWFLAKE_EXAMPLE;
+USE SCHEMA DEMO_REPO;
 
 -- Verify secrets exist
 SHOW SECRETS IN SCHEMA DEMO_REPO;

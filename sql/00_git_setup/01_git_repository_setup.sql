@@ -33,27 +33,10 @@
  * ESTIMATED TIME: 5 seconds (script) + 30 seconds (workspace creation in UI)
  ******************************************************************************/
 
-USE ROLE ACCOUNTADMIN;
-
 -- ============================================================================
--- Create API Integration for GitHub Access (Idempotent)
+-- STEP 1: Create Database and Schema (as SYSADMIN)
 -- ============================================================================
--- 
--- This is the ONLY SQL you need to run. The workspace UI will handle the rest!
--- 
--- Uses CREATE IF NOT EXISTS to safely skip if integration already exists.
--- Safe to run multiple times - won't affect existing Git workspaces.
---
-
-CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
-  API_PROVIDER = git_https_api
-  API_ALLOWED_PREFIXES = ('https://github.com/')
-  ENABLED = TRUE
-  COMMENT = 'DEMO: simple-stream - GitHub integration for public repository access';
-
--- ============================================================================
--- STEP 2: Create Database and Schema (as SYSADMIN)
--- ============================================================================
+-- Database and schema owned by SYSADMIN for proper permission management
 
 USE ROLE SYSADMIN;
 
@@ -64,16 +47,27 @@ CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO
   COMMENT = 'DEMO: sfe-simple-stream - Git repository and secrets';
 
 -- ============================================================================
--- STEP 3: Grant Privileges for Git Repository Creation
+-- STEP 2: Create API Integration for GitHub Access (Requires ACCOUNTADMIN)
 -- ============================================================================
+-- 
+-- This is the ONLY operation that requires ACCOUNTADMIN.
+-- Uses CREATE IF NOT EXISTS to safely skip if integration already exists.
+-- Safe to run multiple times - won't affect existing Git workspaces.
+--
 
 USE ROLE ACCOUNTADMIN;
 
+CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
+  API_PROVIDER = git_https_api
+  API_ALLOWED_PREFIXES = ('https://github.com/')
+  ENABLED = TRUE
+  COMMENT = 'DEMO: simple-stream - GitHub integration for public repository access';
+
+-- Grant USAGE on integration to SYSADMIN
 GRANT USAGE ON INTEGRATION SFE_GIT_API_INTEGRATION TO ROLE SYSADMIN;
-GRANT CREATE GIT REPOSITORY ON SCHEMA SNOWFLAKE_EXAMPLE.DEMO_REPO TO ROLE SYSADMIN;
 
 -- ============================================================================
--- STEP 4: Create Git Repository Object (for EXECUTE IMMEDIATE FROM)
+-- STEP 3: Create Git Repository Object (as SYSADMIN)
 -- ============================================================================
 --
 -- Create the Git repository object that enables EXECUTE IMMEDIATE FROM syntax.
@@ -88,8 +82,10 @@ CREATE OR REPLACE GIT REPOSITORY SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_r
   COMMENT = 'DEMO: sfe-simple-stream - Git repository object for automated deployment';
 
 -- ============================================================================
--- VERIFICATION: Confirm objects were created
+-- STEP 4: VERIFICATION - Confirm objects were created
 -- ============================================================================
+
+USE ROLE SYSADMIN;
 
 SHOW GIT REPOSITORIES IN SCHEMA SNOWFLAKE_EXAMPLE.DEMO_REPO;
 

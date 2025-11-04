@@ -25,6 +25,12 @@
  *   See sql/99_cleanup/teardown_all.sql for complete removal
  ******************************************************************************/
 
+-- ============================================================================
+-- PREREQUISITE: Core setup must be complete
+-- ============================================================================
+-- Run sql/01_setup/01_core_setup.sql first
+
+USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA RAW_INGESTION;
 
