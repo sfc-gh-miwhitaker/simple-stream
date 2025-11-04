@@ -58,21 +58,65 @@ ALTER NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR
   ADD LIVE VERSION FROM LAST;
 
 -- ============================================================================
--- STEP 3: Associate Secrets with Notebook
+-- STEP 3: Create Network Rule for Snowflake REST API Access
 -- ============================================================================
 --
--- Notebooks access secrets via st.secrets, which requires associating
--- the secrets with the notebook using ALTER NOTEBOOK SET SECRETS.
+-- The notebook calls Snowflake Snowpipe Streaming REST API, which requires
+-- external network access. Create a network rule allowing access.
+--
+
+USE ROLE SYSADMIN;
+
+CREATE OR REPLACE NETWORK RULE sfe_snowflake_api_rule
+  MODE = EGRESS
+  TYPE = HOST_PORT
+  VALUE_LIST = ('*.snowflakecomputing.com:443')
+  COMMENT = 'DEMO: sfe-simple-stream - Allow access to Snowflake REST API';
+
+-- ============================================================================
+-- STEP 4: Create External Access Integration
+-- ============================================================================
+--
+-- External Access Integration is required to:
+-- 1. Allow network access per the network rule
+-- 2. Include secrets for authentication
 --
 
 USE ROLE ACCOUNTADMIN;
 
+CREATE OR REPLACE EXTERNAL ACCESS INTEGRATION sfe_simulator_eai
+  ALLOWED_NETWORK_RULES = (sfe_snowflake_api_rule)
+  ALLOWED_AUTHENTICATION_SECRETS = (
+    SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY,
+    SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT,
+    SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER
+  )
+  ENABLED = TRUE
+  COMMENT = 'DEMO: sfe-simple-stream - External access for RFID simulator notebook';
+
+GRANT USAGE ON INTEGRATION sfe_simulator_eai TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 5: Associate EAI and Secrets with Notebook
+-- ============================================================================
+--
+-- Both the EAI and secrets must be associated with the notebook for
+-- st.secrets to work properly.
+--
+
 ALTER NOTEBOOK SNOWFLAKE_EXAMPLE.DEMO_REPO.RFID_SIMULATOR
-  SET SECRETS = (
-    'jwt_key' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY,
-    'account' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT,
-    'user' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER
-  );
+  SET EXTERNAL_ACCESS_INTEGRATIONS = (sfe_simulator_eai),
+    SECRETS = (
+      'jwt_key' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_JWT_KEY,
+      'account' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_ACCOUNT,
+      'user' = SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_SS_USER
+    );
+
+-- ============================================================================
+-- STEP 6: Grant Permissions
+-- ============================================================================
+
+USE ROLE SYSADMIN;
 
 -- ============================================================================
 -- VERIFICATION: Confirm Notebook Was Created
@@ -117,15 +161,10 @@ WHERE "name" = 'RFID_SIMULATOR';
 -- PREREQUISITES FOR NOTEBOOK EXECUTION
 -- ============================================================================
 -- 
--- The notebook requires secrets to be configured. Run this first:
+-- To RUN the simulator notebook, secrets must be configured first:
 --   sql/00_git_setup/02_configure_secrets.sql
--- 
--- The notebook needs:
---   - Secret: SFE_SS_JWT_KEY (JWT private key)
---   - Secret: SFE_SS_ACCOUNT (account identifier)
---   - Secret: SFE_SS_USER (username)
--- 
--- Without these, the notebook will fail when trying to authenticate.
+--
+-- This script handles the EAI and network rule setup automatically.
 -- 
 -- ============================================================================
 
