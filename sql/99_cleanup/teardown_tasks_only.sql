@@ -28,7 +28,7 @@ USE ROLE SYSADMIN;
  ******************************************************************************/
 
 -- Suspend child task first
-ALTER TASK IF EXISTS STAGING_LAYER.sfe_staging_to_analytics_task SUSPEND;
+ALTER TASK IF EXISTS RAW_INGESTION.sfe_staging_to_analytics_task SUSPEND;
 
 -- Suspend parent task
 ALTER TASK IF EXISTS RAW_INGESTION.sfe_raw_to_staging_task SUSPEND;
@@ -65,7 +65,7 @@ FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
  *   ALTER TASK RAW_INGESTION.sfe_raw_to_staging_task RESUME;
  *   
  *   -- Resume child task
- *   ALTER TASK STAGING_LAYER.sfe_staging_to_analytics_task RESUME;
+ *   ALTER TASK RAW_INGESTION.sfe_staging_to_analytics_task RESUME;
  *   
  *   -- Verify tasks are running
  *   SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;

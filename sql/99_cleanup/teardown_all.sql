@@ -14,7 +14,7 @@ USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
 -- Suspend child tasks first
-ALTER TASK IF EXISTS STAGING_LAYER.sfe_staging_to_analytics_task SUSPEND;
+ALTER TASK IF EXISTS RAW_INGESTION.sfe_staging_to_analytics_task SUSPEND;
 ALTER TASK IF EXISTS RAW_INGESTION.sfe_alert_on_data_quality_violations SUSPEND;
 
 -- Suspend parent task
@@ -23,9 +23,9 @@ ALTER TASK IF EXISTS RAW_INGESTION.sfe_raw_to_staging_task SUSPEND;
 -- Wait for any running task executions to complete
 CALL SYSTEM$WAIT(5);
 
--- Drop tasks
+-- Drop tasks (child tasks first, then parent)
 DROP TASK IF EXISTS RAW_INGESTION.sfe_alert_on_data_quality_violations;
-DROP TASK IF EXISTS STAGING_LAYER.sfe_staging_to_analytics_task;
+DROP TASK IF EXISTS RAW_INGESTION.sfe_staging_to_analytics_task;
 DROP TASK IF EXISTS RAW_INGESTION.sfe_raw_to_staging_task;
 
 -- ============================================================================

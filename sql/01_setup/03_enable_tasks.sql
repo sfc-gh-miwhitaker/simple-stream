@@ -149,11 +149,22 @@ BEGIN
 END;
 $$;
 
+-- ============================================================================
+-- STEP 3: Create Child Task (Must be in Same Schema as Parent)
+-- ============================================================================
+-- Note: Snowflake requires child tasks to be in the same schema as parent tasks
+
+USE SCHEMA RAW_INGESTION;
+
 CREATE OR REPLACE TASK sfe_staging_to_analytics_task
     COMMENT = 'DEMO: sfe-simple-stream - STAGING to ANALYTICS task'
-    AFTER SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_raw_to_staging_task
+    AFTER sfe_raw_to_staging_task
 AS
-    CALL sfe_process_badge_events();
+    CALL SNOWFLAKE_EXAMPLE.STAGING_LAYER.sfe_process_badge_events();
+
+-- ============================================================================
+-- STEP 4: Resume Tasks (Child First, Then Parent)
+-- ============================================================================
 
 ALTER TASK sfe_staging_to_analytics_task RESUME;
-ALTER TASK SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_raw_to_staging_task RESUME;
+ALTER TASK sfe_raw_to_staging_task RESUME;

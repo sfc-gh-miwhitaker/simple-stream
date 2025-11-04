@@ -82,78 +82,63 @@ EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branc
 -- Check schemas created
 SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
 
--- Check core infrastructure (raw layer)
-SELECT 
-    'RAW_INGESTION' AS layer,
-    COUNT(DISTINCT CASE WHEN object_type = 'TABLE' THEN object_name END) AS tables,
-    COUNT(DISTINCT CASE WHEN object_type = 'PIPE' THEN object_name END) AS pipes,
-    COUNT(DISTINCT CASE WHEN object_type = 'STREAM' THEN object_name END) AS streams
-FROM (
-    SELECT table_name AS object_name, 'TABLE' AS object_type FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'RAW_INGESTION'
-    UNION ALL
-    SELECT pipe_name, 'PIPE' FROM INFORMATION_SCHEMA.PIPES WHERE pipe_schema = 'RAW_INGESTION'
-    UNION ALL
-    SELECT stream_name, 'STREAM' FROM INFORMATION_SCHEMA.STREAMS WHERE table_schema = 'RAW_INGESTION'
-);
+-- Check core infrastructure (raw layer) - Using SHOW commands for reliability
+SHOW TABLES IN SCHEMA RAW_INGESTION;
 
--- Check analytics layer
-SELECT 
-    'ANALYTICS_LAYER' AS layer,
-    COUNT(DISTINCT CASE WHEN table_name LIKE 'DIM_%' THEN table_name END) AS dimensions,
-    COUNT(DISTINCT CASE WHEN table_name LIKE 'FCT_%' THEN table_name END) AS facts,
-    COUNT(DISTINCT CASE WHEN table_name LIKE 'V_%' THEN table_name END) AS views
-FROM INFORMATION_SCHEMA.TABLES
-WHERE table_schema IN ('STAGING_LAYER', 'ANALYTICS_LAYER');
+SHOW PIPES IN SCHEMA RAW_INGESTION;
+
+SHOW STREAMS IN SCHEMA RAW_INGESTION;
+
+-- Check analytics layer tables
+SHOW TABLES IN SCHEMA ANALYTICS_LAYER;
+
+-- Check staging layer tables
+SHOW TABLES IN SCHEMA STAGING_LAYER;
+
+-- Check monitoring views created (in RAW_INGESTION schema)
+SHOW VIEWS IN SCHEMA RAW_INGESTION;
 
 -- Check seed data loaded
-SELECT 
-    'Dimension Seed Data' AS check_type,
-    (SELECT COUNT(*) FROM ANALYTICS_LAYER.DIM_USERS WHERE is_current = TRUE) AS dim_users,
-    (SELECT COUNT(*) FROM ANALYTICS_LAYER.DIM_ZONES) AS dim_zones;
+SELECT COUNT(*) AS user_count FROM ANALYTICS_LAYER.DIM_USERS WHERE is_current = TRUE;
 
--- Check tasks created and running
-SELECT 
-    name AS task_name,
-    state,
-    schedule,
-    CASE 
-        WHEN state = 'started' THEN ' Running'
-        ELSE ' Suspended'
-    END AS status
-FROM INFORMATION_SCHEMA.TASKS
-WHERE task_schema IN ('RAW_INGESTION', 'STAGING_LAYER')
-ORDER BY name;
+SELECT COUNT(*) AS zone_count FROM ANALYTICS_LAYER.DIM_ZONES;
 
--- Check monitoring views created
-SELECT 
-    table_name,
-    table_type
-FROM INFORMATION_SCHEMA.VIEWS
-WHERE table_schema = 'ANALYTICS_LAYER'
-  AND table_name LIKE 'V_%MONITORING%'
-ORDER BY table_name;
+-- Check tasks created and running (both tasks now in RAW_INGESTION schema)
+SHOW TASKS IN SCHEMA RAW_INGESTION;
 
 -- ============================================================================
--- EXPECTED OUTPUT
+-- EXPECTED OUTPUT VERIFICATION
 -- ============================================================================
 -- 
---  DEPLOYMENT_COMPLETE returned
---  Schemas: RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER created
---  RAW layer: 1 table (RAW_BADGE_EVENTS), 1 pipe, 1 stream
---  ANALYTICS layer: 3 dimensions, 1 fact table, 1 staging table
---  Seed data: 5 users, 5 zones loaded
---  Tasks: 2 tasks created and in "started" state
---  Monitoring views: Created and accessible
+-- SHOW SCHEMAS: Should display RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER, DEMO_REPO
 -- 
--- If tasks show "suspended":
---   - This is OK - they'll resume when data arrives
---   - Or manually resume: ALTER TASK <task_name> RESUME;
+-- SHOW TABLES IN SCHEMA RAW_INGESTION: Should show RAW_BADGE_EVENTS (1 table)
+-- 
+-- SHOW PIPES IN SCHEMA RAW_INGESTION: Should show sfe_badge_events_pipe (1 pipe)
+-- 
+-- SHOW STREAMS IN SCHEMA RAW_INGESTION: Should show sfe_badge_events_stream (1 stream)
+-- 
+-- SHOW TABLES IN SCHEMA ANALYTICS_LAYER: Should show DIM_USERS, DIM_ZONES, DIM_READERS, FCT_ACCESS_EVENTS (4 tables)
+-- 
+-- SHOW TABLES IN SCHEMA STAGING_LAYER: Should show STG_BADGE_EVENTS (1 table)
+-- 
+-- SHOW VIEWS IN SCHEMA RAW_INGESTION: Should show V_CHANNEL_STATUS, V_INGESTION_METRICS, etc. (7+ views)
+-- 
+-- SELECT COUNT... DIM_USERS: Should return 5 (seed data)
+-- 
+-- SELECT COUNT... DIM_ZONES: Should return 5 (seed data)
+-- 
+-- SHOW TASKS IN SCHEMA RAW_INGESTION: Should show 2 tasks:
+--   - sfe_raw_to_staging_task (state = "started")
+--   - sfe_staging_to_analytics_task (state = "started")
+-- 
+-- NOTE: Tasks may show state = "suspended" - this is normal, they activate when stream has data
 -- 
 -- If deployment fails:
---   - Check error message for specific script that failed
---   - Verify Git repository is accessible
+--   - Check error message to identify which script failed
+--   - Verify Git repository is accessible: SHOW GIT REPOSITORIES;
 --   - Ensure SYSADMIN has necessary privileges
---   - Run sql/99_cleanup/teardown_all.sql and retry
+--   - Run sql/99_cleanup/teardown_all.sql and retry deployment
 -- 
--- Next step: Run notebook notebooks/RFID_Simulator.ipynb to send data
+-- Next step: Run notebook notebooks/RFID_Simulator.ipynb to send simulated data
 -- ============================================================================
