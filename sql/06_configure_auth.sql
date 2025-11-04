@@ -35,17 +35,29 @@ GRANT USAGE ON SCHEMA SNOWFLAKE_EXAMPLE.RAW_INGESTION TO ROLE sfe_ingest_role;
 GRANT INSERT ON PIPE SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE TO ROLE sfe_ingest_role;
 
 -- ============================================================================
--- STEP 3: Generate RSA key pair (run on your local machine)
+-- STEP 3: Generate RSA key pair (RECOMMENDED: ssh-keygen)
 -- ============================================================================
 
--- Run these commands in your terminal:
--- 
--- openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
--- openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+-- OPTION 1: ssh-keygen (pre-installed on Mac/Linux/Windows 10+)
+--
+-- Run in your terminal:
+--   ssh-keygen -t rsa -b 2048 -m PEM -f rsa_key -N ""
+--   ssh-keygen -f rsa_key -e -m PEM > rsa_key.pub
+--   mv rsa_key rsa_key.p8
 --
 -- This creates:
---   rsa_key.p8   (private key - give to data provider, NEVER commit to git)
+--   rsa_key.p8   (private key - give to data provider securely)
 --   rsa_key.pub  (public key  - register with Snowflake below)
+
+-- OPTION 2: OpenSSL (if ssh-keygen not available)
+--
+-- Mac/Linux:
+--   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+--   openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+--
+-- Windows: Install OpenSSL first
+--   winget install OpenSSL.Light
+--   (then run Mac/Linux commands above)
 
 -- ============================================================================
 -- STEP 4: Register public key with Snowflake

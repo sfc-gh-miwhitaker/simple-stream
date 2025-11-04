@@ -26,17 +26,26 @@ A complete streaming pipeline with:
 - Views: 7 monitoring views
 - **API configuration output** (copy and share with data provider)
 
-### Step 2: Configure Authentication
+### Step 2: Validate Deployment
 
 ```sql
-@sql/configure_auth.sql
+@sql/05_validate.sql
+```
+
+**Time:** ~10 seconds  
+**What it does:** Runs comprehensive checks on all pipeline components
+
+### Step 3: Configure Authentication
+
+```sql
+@sql/06_configure_auth.sql
 ```
 
 **Time:** ~5 minutes  
 **What it does:**
 - Creates service account (`sfe_ingest_user`)
 - Grants pipe INSERT privileges
-- Guides you through key pair generation
+- Guides you through key pair generation (`ssh-keygen` or OpenSSL)
 - Registers public key with Snowflake
 - Outputs credentials for data provider
 
@@ -59,14 +68,6 @@ SELECT * FROM RAW_INGESTION.V_END_TO_END_LATENCY;
 -- Cost tracking
 SELECT * FROM RAW_INGESTION.V_STREAMING_COSTS;
 ```
-
-## Validate
-
-```sql
-@sql/validate.sql
-```
-
-Runs comprehensive checks on all pipeline components.
 
 ## Cleanup
 
