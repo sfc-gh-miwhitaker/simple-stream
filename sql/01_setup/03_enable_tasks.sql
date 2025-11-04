@@ -1,9 +1,34 @@
 /*******************************************************************************
- * DEMO PROJECT: sfe-simple-stream | Script: Pipeline Tasks
- * ⚠️ NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
- * PURPOSE: Orchestrate CDC pipeline from RAW to ANALYTICS.
- * OBJECTS: sfe_raw_to_staging_task, sfe_process_badge_events, sfe_staging_to_analytics_task
- * CLEANUP: sql/99_cleanup/teardown_all.sql
+ * DEMO PROJECT: sfe-simple-stream
+ * Script: Enable Automated Pipeline Tasks
+ * 
+ * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * 
+ * PURPOSE:
+ *   Create and ENABLE automated tasks that orchestrate the CDC pipeline:
+ *   - RAW → STAGING deduplication task (runs every 1 minute)
+ *   - Stored procedure to process staging events into analytics layer
+ *   - STAGING → ANALYTICS enrichment task (dependent on first task)
+ * 
+ * OBJECTS CREATED:
+ *   - Task: sfe_raw_to_staging_task (with RESUME)
+ *   - Procedure: sfe_process_badge_events()
+ *   - Task: sfe_staging_to_analytics_task (with RESUME)
+ * 
+ * DEPENDENCIES:
+ *   - sql/01_setup/01_core_setup.sql (must run first)
+ *   - sql/01_setup/02_analytics_layer.sql (must run first)
+ * 
+ * ⚠️  WARNING: This script RESUMES tasks, starting automated execution!
+ * 
+ * USAGE:
+ *   Execute in Snowsight: Projects → Workspaces → + SQL File → Run All
+ * 
+ * CLEANUP:
+ *   sql/99_cleanup/teardown_tasks_only.sql (suspend tasks)
+ *   sql/99_cleanup/teardown_all.sql (remove everything)
+ * 
+ * ESTIMATED TIME: 5 seconds
  ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;

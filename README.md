@@ -160,25 +160,31 @@ Need the storyline for executives and integrators? Start with [`docs/LAB_GUIDE.m
 │   ├── 04-RUNNING.md
 │   ├── 05-MONITORING.md
 │   └── PLATFORM_GUIDE.md, REST_API_GUIDE.md, ...
-├── tools/                  # Cross-platform CLI wrappers (check, deploy, simulate, validate)
 ├── sql/                    # Snowflake SQL scripts (numbered)
 │   ├── 01_setup/
 │   ├── 02_validation/
 │   ├── 03_monitoring/
 │   ├── 04_data_quality/
 │   └── 99_cleanup/
-├── python/                 # Python packages
-│   ├── cli/                # Command-line utilities
-│   ├── simulator/          # RFID event simulator
-│   ├── shared/             # Shared helpers & validation
-│   └── tests/              # pytest test suite
+├── notebooks/              # Jupyter notebooks (primary interface)
+│   └── RFID_Simulator.ipynb  # Complete simulator with REST API
 ├── config/                 # `.env` template and key setup guide
-└── examples/               # Sample data & customization templates
+└── examples/               # Sample scripts & customization templates
 ```
 
-## Examples
+## Running the Simulator
 
-- `examples/custom_simulation.py` – run a short-duration simulation (2 minutes at 50 events/sec) for quick testing or customization. Execute with `python examples/custom_simulation.py`.
+**Primary Interface: Jupyter Notebook**
+
+Use `notebooks/RFID_Simulator.ipynb` for the complete simulation experience:
+- ✅ Full REST API implementation with JWT authentication
+- ✅ Interactive step-by-step execution
+- ✅ Real-time validation and monitoring
+- ✅ Visual feedback and metrics
+
+**Quick Example:**
+
+For a standalone event generation example (no REST API), see `examples/custom_simulation.py`.
 
 ## Architecture
 

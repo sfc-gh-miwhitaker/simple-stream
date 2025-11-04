@@ -181,32 +181,19 @@ NUM_READERS=25
 
 ## Step 5: Test Authentication
 
-Verify your configuration:
+Verify your configuration by running the Jupyter Notebook:
 
-```bash
-python -c "
-from python.simulator.auth import SnowflakeAuth
-from python.simulator.config import Config
-
-config = Config()
-auth = SnowflakeAuth(
-    account=config.snowflake_account,
-    user=config.snowflake_user,
-    private_key_path=config.private_key_path,
-    private_key_passphrase=config.private_key_passphrase
-)
-
-token = auth.generate_jwt_token()
-print('✓ JWT Token generated successfully!')
-print(f'  Token length: {len(token)} characters')
-"
-```
+1. Open `notebooks/RFID_Simulator.ipynb` in Snowflake Notebooks
+2. Execute Cell 2 (Configuration - Load from Snowflake Secrets)
+3. Execute Cell 3 (JWT Authentication)
 
 **Expected Output:**
 ```
-✓ JWT Token generated successfully!
-  Token length: 450+ characters
-```
+✅ Configuration loaded for account: YOUR_ACCOUNT
+   User: YOUR_USER
+   Target: SNOWFLAKE_EXAMPLE.STAGE_BADGE_TRACKING.BADGE_EVENTS_PIPE
+✅ JWT authentication initialized
+   Token preview: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 

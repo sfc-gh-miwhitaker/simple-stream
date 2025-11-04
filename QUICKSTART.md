@@ -45,7 +45,7 @@
 ✅ Database created: SNOWFLAKE_EXAMPLE
 ✅ Schema created: GIT_REPOS
 ✅ Repository cloned: SIMPLE_STREAM_REPO (read-only)
-✅ Files visible: sql/, python/, notebooks/, README.md, etc.
+✅ Files visible: sql/, notebooks/, examples/, README.md, etc.
 ```
 
 **What just happened?**
@@ -295,8 +295,8 @@ curl -X POST -H "Authorization: Bearer ${JWT_TOKEN}" \
 
 ### Customize the Pipeline
 
-1. **Modify event schema**: Edit `sql/01_setup/02_raw_table.sql` in Git, commit, fetch
-2. **Add transformations**: Update `sql/01_setup/03_pipe_object.sql` with new columns
+1. **Modify event schema**: Edit `sql/01_setup/01_core_setup.sql` (RAW_BADGE_EVENTS table)
+2. **Add transformations**: Update `sql/01_setup/01_core_setup.sql` (pipe definition with new columns)
 3. **Create dashboards**: Use Snowsight to visualize `FCT_ACCESS_EVENTS`
 4. **Add data quality checks**: Review `sql/04_data_quality/dq_checks.sql`
 

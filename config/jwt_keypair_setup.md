@@ -25,15 +25,36 @@ openssl rsa -in private_key.pem -pubout -out public_key.pem
 # If encrypted, you'll need to enter the passphrase
 ```
 
-### Option B: Using Python
+### Option B: Using Python (cryptography library)
 
 ```python
-from python.simulator.auth import generate_keypair
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from pathlib import Path
 
-# Generate key pair
-private_path, public_path = generate_keypair(output_dir="./config")
+# Generate RSA key pair
+private_key = rsa.generate_private_key(
+    public_exponent=65537,
+    key_size=2048
+)
 
-# This will print the public key in format needed for Snowflake
+# Save private key
+private_pem = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption()
+)
+Path("./config/rsa_key.p8").write_bytes(private_pem)
+
+# Save public key
+public_key = private_key.public_key()
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+Path("./config/rsa_key.pub").write_bytes(public_pem)
+
+print("✅ Key pair generated: ./config/rsa_key.p8 and ./config/rsa_key.pub")
 ```
 
 ## Step 2: Extract Public Key for Snowflake
@@ -81,20 +102,13 @@ SNOWFLAKE_PRIVATE_KEY_PASSPHRASE=your_passphrase_here
 
 ## Step 5: Test Authentication
 
-```bash
-# Test JWT token generation
-python -c "
-from python.simulator.auth import SnowflakeAuth
-auth = SnowflakeAuth(
-    account='your_account',
-    user='YOUR_USERNAME',
-    private_key_path='./config/private_key.pem'
-)
-token = auth.generate_jwt_token()
-print('JWT Token generated successfully!')
-print(f'Token length: {len(token)} characters')
-"
-```
+Test JWT token generation using the Jupyter Notebook:
+
+1. Open `notebooks/RFID_Simulator.ipynb` in Snowflake
+2. Execute Cell 2 (Load secrets) and Cell 3 (JWT Authentication)
+3. Verify you see "✅ JWT authentication initialized"
+
+The notebook contains the complete SnowflakeAuth class implementation with JWT token generation.
 
 ## Security Best Practices
 
