@@ -36,104 +36,123 @@
 USE ROLE SYSADMIN;
 
 -- ============================================================================
--- STEP 1: Discover Git Repository Location
+-- AUTOMATED DEPLOYMENT: Execute all scripts from Git repository
 -- ============================================================================
 --
--- The workspace UI creates the Git repository object somewhere in your account.
--- Let's find it dynamically so this script works regardless of where it was created.
+-- PREREQUISITE: sql/00_git_setup/01_git_repository_setup.sql must be run first
+--               to create the Git repository object at:
+--               @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo
 --
-
-SHOW GIT REPOSITORIES IN ACCOUNT;
-
--- Capture the Git repo path from the SHOW command above
-SET git_repo_path = (
-    SELECT '@' || "database_name" || '.' || "schema_name" || '.' || "name"
-    FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
-    WHERE "origin" LIKE '%sfe-simple-stream%'
-    LIMIT 1
-);
-
-SELECT $git_repo_path AS discovered_git_repository;
-
--- ============================================================================
--- STEP 2: Execute All Setup Scripts from Git Repository
--- ============================================================================
 
 -- Step 1: Core infrastructure (DB, schemas, raw table, pipe, stream)
-EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/01_core_setup.sql';
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/01_core_setup.sql;
 
 -- Step 2: Analytics layer (staging, dimensions, facts)
-EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/02_analytics_layer.sql';
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/02_analytics_layer.sql;
 
 -- Step 3: Task automation (CDC tasks with auto-resume)
-EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/01_setup/03_enable_tasks.sql';
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/01_setup/03_enable_tasks.sql;
 
 -- Step 4: Monitoring views
-EXECUTE IMMEDIATE 'EXECUTE IMMEDIATE FROM ' || $git_repo_path || '/branches/main/sql/03_monitoring/monitoring_views.sql';
+EXECUTE IMMEDIATE FROM @SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo/branches/main/sql/03_monitoring/monitoring_views.sql;
 
 -- ============================================================================
--- VERIFICATION: Confirm deployment succeeded
+-- VERIFICATION: Deployment Validation Report
 -- ============================================================================
 
--- Check schemas created
-SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
+SELECT
+    'Schemas' AS object_type,
+    COUNT(*) AS actual_count,
+    4 AS expected_count,
+    IFF(COUNT(*) = 4, 'PASS', 'FAIL') AS status
+FROM INFORMATION_SCHEMA.SCHEMATA
+WHERE CATALOG_NAME = 'SNOWFLAKE_EXAMPLE'
+  AND SCHEMA_NAME IN ('RAW_INGESTION', 'STAGING_LAYER', 'ANALYTICS_LAYER', 'DEMO_REPO')
 
--- Check core infrastructure (raw layer) - Using SHOW commands for reliability
-SHOW TABLES IN SCHEMA RAW_INGESTION;
+UNION ALL
 
-SHOW PIPES IN SCHEMA RAW_INGESTION;
+SELECT
+    'Tables (RAW_INGESTION)' AS object_type,
+    COUNT(*) AS actual_count,
+    1 AS expected_count,
+    IFF(COUNT(*) = 1, 'PASS', 'FAIL') AS status
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'RAW_INGESTION'
+  AND TABLE_TYPE = 'BASE TABLE'
 
-SHOW STREAMS IN SCHEMA RAW_INGESTION;
+UNION ALL
 
--- Check analytics layer tables
-SHOW TABLES IN SCHEMA ANALYTICS_LAYER;
+SELECT
+    'Tables (STAGING_LAYER)' AS object_type,
+    COUNT(*) AS actual_count,
+    1 AS expected_count,
+    IFF(COUNT(*) = 1, 'PASS', 'FAIL') AS status
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'STAGING_LAYER'
+  AND TABLE_TYPE = 'BASE TABLE'
 
--- Check staging layer tables
-SHOW TABLES IN SCHEMA STAGING_LAYER;
+UNION ALL
 
--- Check monitoring views created (in RAW_INGESTION schema)
-SHOW VIEWS IN SCHEMA RAW_INGESTION;
+SELECT
+    'Tables (ANALYTICS_LAYER)' AS object_type,
+    COUNT(*) AS actual_count,
+    4 AS expected_count,
+    IFF(COUNT(*) >= 4, 'PASS', 'FAIL') AS status
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'ANALYTICS_LAYER'
+  AND TABLE_TYPE = 'BASE TABLE'
 
--- Check seed data loaded
-SELECT COUNT(*) AS user_count FROM ANALYTICS_LAYER.DIM_USERS WHERE is_current = TRUE;
+UNION ALL
 
-SELECT COUNT(*) AS zone_count FROM ANALYTICS_LAYER.DIM_ZONES;
+SELECT
+    'Views (RAW_INGESTION)' AS object_type,
+    COUNT(*) AS actual_count,
+    7 AS expected_count,
+    IFF(COUNT(*) >= 7, 'PASS', 'FAIL') AS status
+FROM INFORMATION_SCHEMA.VIEWS
+WHERE TABLE_SCHEMA = 'RAW_INGESTION'
 
--- Check tasks created and running (both tasks now in RAW_INGESTION schema)
+UNION ALL
+
+SELECT
+    'Seed Data (DIM_USERS)' AS object_type,
+    COUNT(*) AS actual_count,
+    5 AS expected_count,
+    IFF(COUNT(*) = 5, 'PASS', 'FAIL') AS status
+FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_USERS
+WHERE is_current = TRUE
+
+UNION ALL
+
+SELECT
+    'Seed Data (DIM_ZONES)' AS object_type,
+    COUNT(*) AS actual_count,
+    5 AS expected_count,
+    IFF(COUNT(*) = 5, 'PASS', 'FAIL') AS status
+FROM SNOWFLAKE_EXAMPLE.ANALYTICS_LAYER.DIM_ZONES
+
+ORDER BY object_type;
+
+-- Check tasks separately (INFORMATION_SCHEMA.TASKS doesn't exist)
 SHOW TASKS IN SCHEMA RAW_INGESTION;
 
+SELECT
+    'Tasks (RAW_INGESTION)' AS object_type,
+    COUNT(*) AS actual_count,
+    2 AS expected_count,
+    IFF(COUNT(*) = 2, 'PASS', 'FAIL') AS status
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+WHERE "name" IN ('SFE_RAW_TO_STAGING_TASK', 'SFE_STAGING_TO_ANALYTICS_TASK');
+
 -- ============================================================================
--- EXPECTED OUTPUT VERIFICATION
+-- EXPECTED VALIDATION RESULTS
 -- ============================================================================
 -- 
--- SHOW SCHEMAS: Should display RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER, DEMO_REPO
+-- All rows should show status = 'PASS'
 -- 
--- SHOW TABLES IN SCHEMA RAW_INGESTION: Should show RAW_BADGE_EVENTS (1 table)
--- 
--- SHOW PIPES IN SCHEMA RAW_INGESTION: Should show sfe_badge_events_pipe (1 pipe)
--- 
--- SHOW STREAMS IN SCHEMA RAW_INGESTION: Should show sfe_badge_events_stream (1 stream)
--- 
--- SHOW TABLES IN SCHEMA ANALYTICS_LAYER: Should show DIM_USERS, DIM_ZONES, DIM_READERS, FCT_ACCESS_EVENTS (4 tables)
--- 
--- SHOW TABLES IN SCHEMA STAGING_LAYER: Should show STG_BADGE_EVENTS (1 table)
--- 
--- SHOW VIEWS IN SCHEMA RAW_INGESTION: Should show V_CHANNEL_STATUS, V_INGESTION_METRICS, etc. (7+ views)
--- 
--- SELECT COUNT... DIM_USERS: Should return 5 (seed data)
--- 
--- SELECT COUNT... DIM_ZONES: Should return 5 (seed data)
--- 
--- SHOW TASKS IN SCHEMA RAW_INGESTION: Should show 2 tasks:
---   - sfe_raw_to_staging_task (state = "started")
---   - sfe_staging_to_analytics_task (state = "started")
--- 
--- NOTE: Tasks may show state = "suspended" - this is normal, they activate when stream has data
--- 
--- If deployment fails:
---   - Check error message to identify which script failed
---   - Verify Git repository is accessible: SHOW GIT REPOSITORIES;
---   - Ensure SYSADMIN has necessary privileges
+-- If any row shows 'FAIL':
+--   - Check error messages from the EXECUTE IMMEDIATE statements above
+--   - Verify SYSADMIN has necessary privileges
 --   - Run sql/99_cleanup/teardown_all.sql and retry deployment
 -- 
 -- Next step: Run notebook notebooks/RFID_Simulator.ipynb to send simulated data

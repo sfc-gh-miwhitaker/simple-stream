@@ -52,22 +52,68 @@ CREATE API INTEGRATION IF NOT EXISTS SFE_GIT_API_INTEGRATION
   COMMENT = 'DEMO: simple-stream - GitHub integration for public repository access';
 
 -- ============================================================================
--- VERIFICATION: Confirm API integration was created
+-- STEP 2: Create Database and Schema (as SYSADMIN)
 -- ============================================================================
 
-SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
+USE ROLE SYSADMIN;
+
+CREATE DATABASE IF NOT EXISTS SNOWFLAKE_EXAMPLE
+  COMMENT = 'DEMO: Repository for example/demo projects - NOT FOR PRODUCTION';
+
+CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO
+  COMMENT = 'DEMO: sfe-simple-stream - Git repository and secrets';
+
+-- ============================================================================
+-- STEP 3: Grant Privileges for Git Repository Creation
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+GRANT USAGE ON INTEGRATION SFE_GIT_API_INTEGRATION TO ROLE SYSADMIN;
+GRANT CREATE GIT REPOSITORY ON SCHEMA SNOWFLAKE_EXAMPLE.DEMO_REPO TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 4: Create Git Repository Object (for EXECUTE IMMEDIATE FROM)
+-- ============================================================================
+--
+-- Create the Git repository object that enables EXECUTE IMMEDIATE FROM syntax.
+-- This is separate from (and in addition to) the workspace you'll create in the UI.
+--
+
+USE ROLE SYSADMIN;
+
+CREATE OR REPLACE GIT REPOSITORY SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo
+  API_INTEGRATION = SFE_GIT_API_INTEGRATION
+  ORIGIN = 'https://github.com/sfc-gh-miwhitaker/sfe-simple-stream'
+  COMMENT = 'DEMO: sfe-simple-stream - Git repository object for automated deployment';
+
+-- ============================================================================
+-- VERIFICATION: Confirm objects were created
+-- ============================================================================
+
+SHOW GIT REPOSITORIES IN SCHEMA SNOWFLAKE_EXAMPLE.DEMO_REPO;
+
+SELECT
+    'Git Repository' AS object_type,
+    COUNT(*) AS actual_count,
+    1 AS expected_count,
+    IFF(COUNT(*) = 1, 'PASS', 'FAIL') AS status
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
 
 -- ============================================================================
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
 -- API Integration: SFE_GIT_API_INTEGRATION (enabled = true)
+-- Git Repository:  SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo (created)
+-- Database:        SNOWFLAKE_EXAMPLE
+-- Schema:          DEMO_REPO
 -- 
 -- ============================================================================
--- NEXT STEP: Create Git Workspace in Snowsight UI
+-- NEXT STEP: Create Git Workspace in Snowsight UI (OPTIONAL but RECOMMENDED)
 -- ============================================================================
 -- 
--- Now create your Git workspace to access all project files:
+-- For the best development experience, create a Git workspace:
 -- 
 -- 1. In Snowsight, go to: Projects → Workspaces
 -- 2. Click: "+ Workspace" → "From Git repository"
@@ -79,14 +125,23 @@ SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
 --    - Branch:            main
 -- 4. Click "Create"
 -- 
--- This creates both:
---    - A workspace UI (file explorer, notebooks, SQL editor)
---    - A Git repository object (Snowflake stage for EXECUTE IMMEDIATE FROM)
+-- Benefits:
+--    - File explorer for browsing all SQL scripts and notebooks
+--    - Syntax highlighting and code completion
+--    - Easy navigation and file management
+-- 
+-- NOTE: The workspace is separate from the Git repository object created above.
+--       The Git repo object (sfe_simple_stream_repo) is used by deployment scripts.
+--       The workspace is used for interactive development.
 -- 
 -- ============================================================================
--- AFTER WORKSPACE CREATION: Configure Secrets
+-- NEXT STEP: Configure Secrets OR Deploy Pipeline
 -- ============================================================================
 -- 
--- Open your new workspace and run: sql/00_git_setup/02_configure_secrets.sql
+-- Option A: Configure secrets first (needed for simulator):
+--   Run: sql/00_git_setup/02_configure_secrets.sql
+-- 
+-- Option B: Skip to automated deployment (secrets optional):
+--   Run: sql/00_git_setup/03_deploy_from_git.sql
 -- ============================================================================
 
