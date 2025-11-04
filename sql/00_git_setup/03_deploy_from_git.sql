@@ -34,11 +34,15 @@ USE SCHEMA DEMO_REPO;
 -- Verify Git repository exists before deployment
 SHOW GIT REPOSITORIES IN SCHEMA DEMO_REPO;
 
+-- Fetch latest changes from remote Git repository
+ALTER GIT REPOSITORY SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo FETCH;
+
 -- ============================================================================
 -- AUTOMATED DEPLOYMENT: Execute scripts from Git repository
 -- ============================================================================
 --
 -- Uses EXECUTE IMMEDIATE FROM to run scripts directly from Git repository
+-- Syntax: EXECUTE IMMEDIATE FROM @repo_name/branches/branch_name/file_path;
 --
 
 -- Step 1: Core infrastructure (DB, schemas, raw table, pipe, stream)

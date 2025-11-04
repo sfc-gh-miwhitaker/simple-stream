@@ -150,8 +150,8 @@ END;
 $$;
 
 CREATE OR REPLACE TASK sfe_staging_to_analytics_task
-    AFTER sfe_raw_to_staging_task
     COMMENT = 'DEMO: sfe-simple-stream - STAGING to ANALYTICS task'
+    AFTER sfe_raw_to_staging_task
 AS
     CALL sfe_process_badge_events();
 
