@@ -1,6 +1,6 @@
 /*******************************************************************************
  * DEMO PROJECT: sfe-simple-stream | Script: Complete Teardown
- * ⚠️ DESTRUCTIVE OPERATION - ALL DATA WILL BE PERMANENTLY DELETED
+ * WARNING: DESTRUCTIVE OPERATION - ALL DATA WILL BE PERMANENTLY DELETED
  * PURPOSE: Remove all demo objects while preserving SNOWFLAKE_EXAMPLE database.
  * CLEANUP RULE: Drop schemas, tables, streams, tasks, pipes, secrets, repo, warehouse, API integration.
  ******************************************************************************/
@@ -162,6 +162,6 @@ SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;
 -- ============================================================================
 -- CLEANUP COMPLETE
 -- ============================================================================
--- ✅ All demo objects removed
--- ✅ SNOWFLAKE_EXAMPLE database preserved (as per cleanup rule)
--- ✅ Ready for fresh deployment
+-- All demo objects removed
+-- SNOWFLAKE_EXAMPLE database preserved (as per cleanup rule)
+-- Ready for fresh deployment

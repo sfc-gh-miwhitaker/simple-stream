@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Convenience Stored Procedures
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Create optional helper procedures for common operations:
@@ -181,9 +181,9 @@ CALL SFE_VALIDATE_PIPELINE();
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ Procedures created: SFE_DEPLOY_PIPELINE, SFE_VALIDATE_PIPELINE, SFE_RESET_PIPELINE
--- ✅ Permissions granted to SYSADMIN role
--- ✅ Validation test returns JSON object (may show 0 rows if pipeline not deployed)
+--  Procedures created: SFE_DEPLOY_PIPELINE, SFE_VALIDATE_PIPELINE, SFE_RESET_PIPELINE
+--  Permissions granted to SYSADMIN role
+--  Validation test returns JSON object (may show 0 rows if pipeline not deployed)
 -- 
 -- USAGE EXAMPLES:
 -- 

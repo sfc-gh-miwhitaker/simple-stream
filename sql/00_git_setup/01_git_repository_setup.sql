@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Git Repository Setup
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Create API integration for GitHub access. This is the ONLY thing you need
@@ -58,7 +58,7 @@ SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ API Integration created: SFE_GIT_API_INTEGRATION (enabled = true)
+-- API Integration created: SFE_GIT_API_INTEGRATION (enabled = true)
 -- 
 -- ============================================================================
 -- NEXT STEP: Create Git Workspace in Snowsight
@@ -71,15 +71,15 @@ SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
 -- 2. Click: "+ Workspace" → "From Git repository"
 -- 
 -- 3. Fill in the form:
---    • Repository URL:    https://github.com/sfc-gh-miwhitaker/sfe-simple-stream
---    • Workspace Name:    sfe-simple-stream
---    • API Integration:   SFE_GIT_API_INTEGRATION  ← Created by this script!
---    • Authentication:    No authentication (public repo)
---    • Branch:            main
+--    - Repository URL:    https://github.com/sfc-gh-miwhitaker/sfe-simple-stream
+--    - Workspace Name:    sfe-simple-stream
+--    - API Integration:   SFE_GIT_API_INTEGRATION  (Created by this script)
+--    - Authentication:    No authentication (public repo)
+--    - Branch:            main
 -- 
 -- 4. Click "Create"
 -- 
--- ✅ Done! Your workspace will:
+-- Done! Your workspace will:
 --    - Appear in Projects → Workspaces (persists across sessions)
 --    - Show all SQL files, notebooks, and docs in the file explorer
 --    - Allow you to run scripts directly from the Git repository

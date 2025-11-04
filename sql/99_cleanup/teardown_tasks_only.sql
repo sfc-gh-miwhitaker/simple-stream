@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Suspend Tasks (Preserve Data)
  * 
- * ⚠️  NON-DESTRUCTIVE - Pauses pipeline, preserves all data
+ * WARNING:  NON-DESTRUCTIVE - Pauses pipeline, preserves all data
  * 
  * PURPOSE:
  *   Stop all tasks to pause the data pipeline while preserving all data
@@ -48,8 +48,8 @@ SELECT
     warehouse,
     schedule,
     CASE 
-        WHEN state = 'suspended' THEN '✅ Suspended successfully'
-        ELSE '❌ Still active'
+        WHEN state = 'suspended' THEN ' Suspended successfully'
+        ELSE ' Still active'
     END AS status
 FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
 
@@ -77,17 +77,17 @@ FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
 /*******************************************************************************
  * WHAT HAPPENS WHEN TASKS ARE SUSPENDED?
  * 
- * ✅ Pipeline stops processing new data
- * ✅ All data remains intact (no data loss)
- * ✅ Warehouse will not be charged (no task executions)
- * ✅ Streams continue tracking changes (offsets preserved)
- * ✅ Pipe continues accepting data via REST API
+ *  Pipeline stops processing new data
+ *  All data remains intact (no data loss)
+ *  Warehouse will not be charged (no task executions)
+ *  Streams continue tracking changes (offsets preserved)
+ *  Pipe continues accepting data via REST API
  * 
- * ⚠️  New data will accumulate in:
+ * WARNING:  New data will accumulate in:
  *     - RAW_INGESTION.RAW_BADGE_EVENTS (from pipe)
  *     - Stream sfe_badge_events_stream (tracks raw inserts)
  * 
- * 📊 When resumed, tasks will process ALL accumulated data since suspension
+ *  When resumed, tasks will process ALL accumulated data since suspension
  ******************************************************************************/
 
 /*******************************************************************************

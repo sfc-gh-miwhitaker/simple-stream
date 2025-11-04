@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Automated Deployment from Git
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Automated deployment that reads SQL scripts from the Git repository and
@@ -19,7 +19,7 @@
  *   - API integration exists (SFE_GIT_API_INTEGRATION)
  *   - Optional: secrets configured (only needed if running simulator)
  * 
- * ⚠️  IMPORTANT: This script must be run from within your Git workspace!
+ * WARNING:  IMPORTANT: This script must be run from within your Git workspace!
  *     The workspace knows where the Git repository is located.
  * 
  * USAGE:
@@ -55,7 +55,7 @@ SHOW GIT REPOSITORIES LIKE '%sfe_simple_stream%';
 -- AUTOMATED DEPLOYMENT: Execute scripts from Git repository
 -- ============================================================================
 --
--- ⚠️  EDIT THE @... PATHS BELOW TO MATCH YOUR GIT REPOSITORY LOCATION
+-- WARNING:  EDIT THE @... PATHS BELOW TO MATCH YOUR GIT REPOSITORY LOCATION
 --
 -- Replace "SNOWFLAKE_EXAMPLE.DEMO_REPO.sfe_simple_stream_repo" with the
 -- actual database.schema.repository_name from the SHOW command above.
@@ -117,8 +117,8 @@ SELECT
     state,
     schedule,
     CASE 
-        WHEN state = 'started' THEN '✅ Running'
-        ELSE '❌ Suspended'
+        WHEN state = 'started' THEN ' Running'
+        ELSE ' Suspended'
     END AS status
 FROM INFORMATION_SCHEMA.TASKS
 WHERE task_schema IN ('RAW_INGESTION', 'STAGING_LAYER')
@@ -137,13 +137,13 @@ ORDER BY table_name;
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ DEPLOYMENT_COMPLETE returned
--- ✅ Schemas: RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER created
--- ✅ RAW layer: 1 table (RAW_BADGE_EVENTS), 1 pipe, 1 stream
--- ✅ ANALYTICS layer: 3 dimensions, 1 fact table, 1 staging table
--- ✅ Seed data: 5 users, 5 zones loaded
--- ✅ Tasks: 2 tasks created and in "started" state
--- ✅ Monitoring views: Created and accessible
+--  DEPLOYMENT_COMPLETE returned
+--  Schemas: RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER created
+--  RAW layer: 1 table (RAW_BADGE_EVENTS), 1 pipe, 1 stream
+--  ANALYTICS layer: 3 dimensions, 1 fact table, 1 staging table
+--  Seed data: 5 users, 5 zones loaded
+--  Tasks: 2 tasks created and in "started" state
+--  Monitoring views: Created and accessible
 -- 
 -- If tasks show "suspended":
 --   - This is OK - they'll resume when data arrives

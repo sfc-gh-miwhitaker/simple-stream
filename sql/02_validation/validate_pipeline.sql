@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Pipeline Validation
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Comprehensive validation queries to verify data flow through the entire
@@ -51,8 +51,8 @@ SELECT
     SYSTEM$STREAM_HAS_DATA('RAW_INGESTION.sfe_badge_events_stream') AS status,
     CASE 
         WHEN SYSTEM$STREAM_HAS_DATA('RAW_INGESTION.sfe_badge_events_stream') = 'true'
-        THEN '⚠️  Data pending (tasks still processing)'
-        ELSE '✅ Stream consumed (pipeline caught up)'
+        THEN 'WARNING:  Data pending (tasks still processing)'
+        ELSE ' Stream consumed (pipeline caught up)'
     END AS interpretation;
 
 -- ----------------------------------------------------------------------------
@@ -325,14 +325,14 @@ ORDER BY row_count DESC;
 -- EXPECTED RESULTS SUMMARY
 -- ============================================================================
 -- 
--- ✅ HEALTHY PIPELINE:
+--  HEALTHY PIPELINE:
 --   - RAW count ≈ STAGING count ≈ FACT count (after deduplication)
 --   - Stream status: FALSE (all data consumed)
 --   - Task state: SUCCEEDED
 --   - Latency: < 120 seconds (given 1-minute task schedule)
 --   - No NULL values in required fields
 -- 
--- ⚠️  TROUBLESHOOTING:
+-- WARNING:  TROUBLESHOOTING:
 --   - Stream has data (TRUE): Tasks still processing, wait 1-2 minutes
 --   - STAGING < RAW: Tasks haven't finished, check task history
 --   - FACT < STAGING: Missing dimension keys, check dimension tables

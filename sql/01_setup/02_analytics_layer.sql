@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Analytics Layer Setup
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Provision staging and analytics layer tables for badge event processing:
@@ -191,10 +191,10 @@ SHOW TABLES LIKE 'FCT_ACCESS_EVENTS' IN SCHEMA ANALYTICS_LAYER;
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ Staging table created: STG_BADGE_EVENTS (transient, 1-day retention)
--- ✅ Dimension tables created: DIM_USERS, DIM_ZONES, DIM_READERS
--- ✅ Seed data loaded: 5 users, 5 zones
--- ✅ Fact table created: FCT_ACCESS_EVENTS (clustered by event_date)
+--  Staging table created: STG_BADGE_EVENTS (transient, 1-day retention)
+--  Dimension tables created: DIM_USERS, DIM_ZONES, DIM_READERS
+--  Seed data loaded: 5 users, 5 zones
+--  Fact table created: FCT_ACCESS_EVENTS (clustered by event_date)
 -- 
 -- Next step: Run sql/01_setup/03_enable_tasks.sql
 -- ============================================================================

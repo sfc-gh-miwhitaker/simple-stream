@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Monitoring Views
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Create comprehensive monitoring views for tracking ingestion health,
@@ -17,7 +17,7 @@
  *   6. V_STREAMING_COSTS: Cost tracking with actual credits (FILE_MIGRATION_HISTORY)
  *   7. V_TASK_EXECUTION_HISTORY: Task performance (TASK_HISTORY)
  * 
- * ⚠️  NOTE: ACCOUNT_USAGE views have latency (up to 120 minutes).
+ * WARNING:  NOTE: ACCOUNT_USAGE views have latency (up to 120 minutes).
  *     V_CHANNEL_STATUS and V_STREAMING_COSTS use FILE_MIGRATION_HISTORY.
  *     For real-time event monitoring, query RAW_BADGE_EVENTS directly.
  * 

@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Core Infrastructure Setup
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Provision the core infrastructure for badge event streaming:
@@ -122,11 +122,11 @@ SHOW STREAMS IN SCHEMA RAW_INGESTION;
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ Database created: SNOWFLAKE_EXAMPLE
--- ✅ Schemas created: RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER
--- ✅ Table created: RAW_BADGE_EVENTS (10 columns)
--- ✅ Pipe created: sfe_badge_events_pipe
--- ✅ Stream created: sfe_badge_events_stream
+--  Database created: SNOWFLAKE_EXAMPLE
+--  Schemas created: RAW_INGESTION, STAGING_LAYER, ANALYTICS_LAYER
+--  Table created: RAW_BADGE_EVENTS (10 columns)
+--  Pipe created: sfe_badge_events_pipe
+--  Stream created: sfe_badge_events_stream
 -- 
 -- Next step: Run sql/01_setup/02_analytics_layer.sql
 -- ============================================================================

@@ -2,7 +2,7 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Enable Automated Pipeline Tasks
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING:  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Create and ENABLE automated tasks that orchestrate the CDC pipeline:
@@ -19,7 +19,7 @@
  *   - sql/01_setup/01_core_setup.sql (must run first)
  *   - sql/01_setup/02_analytics_layer.sql (must run first)
  * 
- * ⚠️  WARNING: This script RESUMES tasks, starting automated execution!
+ * WARNING:  WARNING: This script RESUMES tasks, starting automated execution!
  * 
  * USAGE:
  *   Execute in Snowsight: Projects → Workspaces → + SQL File → Run All
@@ -151,7 +151,7 @@ $$;
 
 CREATE OR REPLACE TASK sfe_staging_to_analytics_task
     COMMENT = 'DEMO: sfe-simple-stream - STAGING to ANALYTICS task'
-    AFTER sfe_raw_to_staging_task
+    AFTER SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_raw_to_staging_task
 AS
     CALL sfe_process_badge_events();
 

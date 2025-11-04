@@ -2,13 +2,13 @@
  * DEMO PROJECT: sfe-simple-stream
  * Script: Configure Secrets for JWT Authentication
  * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * WARNING: NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
  * 
  * PURPOSE:
  *   Create Snowflake secrets to securely store JWT authentication credentials
  *   for the RFID simulator notebook (notebooks/RFID_Simulator.ipynb).
  * 
- * ⚠️  ONLY NEEDED IF: You plan to run the simulator notebook!
+ * WARNING:  ONLY NEEDED IF: You plan to run the simulator notebook!
  *   
  *   If you're just deploying the SQL pipeline and monitoring views, you can
  *   SKIP this script and go directly to sql/00_git_setup/03_deploy_from_git.sql
@@ -81,7 +81,7 @@ SELECT
 
 CREATE OR REPLACE SECRET SFE_SS_ACCOUNT
   TYPE = GENERIC_STRING
-  SECRET_STRING = 'YOUR_ACCOUNT_IDENTIFIER'  -- ⚠️ EDIT THIS: Paste the value from above
+  SECRET_STRING = 'YOUR_ACCOUNT_IDENTIFIER'  -- WARNING: EDIT THIS: Paste the value from above
   COMMENT = 'DEMO: sfe-simple-stream - Snowflake account identifier for REST API';
 
 -- ============================================================================
@@ -110,14 +110,14 @@ SELECT
 
 CREATE OR REPLACE SECRET SFE_SS_USER
   TYPE = GENERIC_STRING
-  SECRET_STRING = 'YOUR_USERNAME'  -- ⚠️ EDIT THIS: Paste the value from above
+  SECRET_STRING = 'YOUR_USERNAME'  -- WARNING: EDIT THIS: Paste the value from above
   COMMENT = 'DEMO: sfe-simple-stream - Snowflake user for JWT authentication';
 
 -- ============================================================================
 -- STEP 5: Store RSA Private Key
 -- ============================================================================
 -- 
--- 📋 How to get your private key:
+--  How to get your private key:
 --   1. If using OpenSSL (see config/jwt_keypair_setup.md):
 --      cat config/rsa_key.p8
 --   
@@ -140,7 +140,7 @@ CREATE OR REPLACE SECRET SFE_SS_USER
 --      ...
 --      -----END PRIVATE KEY-----
 -- 
--- ⚠️  SECURITY NOTES:
+-- WARNING:  SECURITY NOTES:
 --   - Never commit private keys to Git
 --   - Keep the key secure (treat like a password)
 --   - For production, use encrypted keys with passphrases
@@ -153,7 +153,7 @@ CREATE OR REPLACE SECRET SFE_SS_JWT_KEY
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASC...
 ...PASTE YOUR FULL PRIVATE KEY HERE (REPLACE ALL THESE LINES)...
 ...INCLUDE ALL LINES FROM YOUR KEY FILE...
------END PRIVATE KEY-----'  -- ⚠️ EDIT THIS: Paste your complete private key
+-----END PRIVATE KEY-----'  -- WARNING: EDIT THIS: Paste your complete private key
   COMMENT = 'DEMO: sfe-simple-stream - RSA private key (PKCS#8 format) for JWT token generation';
 
 -- ============================================================================
@@ -179,10 +179,10 @@ DESC SECRET SFE_SS_JWT_KEY;
 -- EXPECTED OUTPUT
 -- ============================================================================
 -- 
--- ✅ Secrets created: SFE_SS_ACCOUNT, SFE_SS_USER, SFE_SS_JWT_KEY
--- ✅ Permissions granted to SYSADMIN role
--- ✅ SHOW SECRETS displays all 3 secrets
--- ✅ DESC SECRET shows metadata (type, comment, created date)
+--  Secrets created: SFE_SS_ACCOUNT, SFE_SS_USER, SFE_SS_JWT_KEY
+--  Permissions granted to SYSADMIN role
+--  SHOW SECRETS displays all 3 secrets
+--  DESC SECRET shows metadata (type, comment, created date)
 -- 
 -- NOTE: Secret values are never displayed in SQL queries (security feature)
 -- 
@@ -191,7 +191,7 @@ DESC SECRET SFE_SS_JWT_KEY;
 -- 2. Cell 2 will attempt to load secrets using _snowflake.get_generic_secret_string()
 -- 3. If secrets load successfully, you'll see account/user displayed
 -- 
--- ⚠️  Common Issues:
+-- WARNING:  Common Issues:
 -- 
 -- If secrets don't work in notebook:
 --   - Verify you replaced ALL placeholder values (YOUR_ACCOUNT_IDENTIFIER, etc.)
@@ -208,7 +208,7 @@ DESC SECRET SFE_SS_JWT_KEY;
 -- NEXT STEPS
 -- ============================================================================
 -- 
--- ✅ Secrets configured! Now you can:
+--  Secrets configured! Now you can:
 -- 
 -- 1. Deploy the SQL pipeline:
 --    → Run: sql/00_git_setup/03_deploy_from_git.sql
@@ -218,7 +218,7 @@ DESC SECRET SFE_SS_JWT_KEY;
 --    → The notebook will use these secrets for JWT authentication
 --    → Sends simulated badge events via Snowpipe Streaming REST API
 -- 
--- ⚠️  Remember: These secrets are ONLY needed for the simulator notebook!
+-- WARNING:  Remember: These secrets are ONLY needed for the simulator notebook!
 --     The SQL pipeline deployment (step 1) does not require them.
 -- 
 -- ============================================================================
