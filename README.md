@@ -37,7 +37,8 @@ See [`docs/REST_API_GUIDE.md`](docs/REST_API_GUIDE.md) for complete API referenc
 | Object Type | Name | Purpose |
 |-------------|------|---------|
 | API Integration | `SFE_GIT_API_INTEGRATION` | GitHub repository access for public repo cloning |
-| Warehouse | `SFE_SIMPLE_STREAM_WH` | Dedicated demo compute for cost isolation |
+
+**Note:** Tasks use **serverless compute** (no warehouse needed) - Snowflake automatically manages compute resources.
 
 ### Database Objects (in SNOWFLAKE_EXAMPLE)
 
@@ -321,7 +322,6 @@ CALL SNOWFLAKE_EXAMPLE.DEMO_REPO.SFE_RESET_PIPELINE();
 
 -- Manual cleanup (if needed):
 DROP DATABASE IF EXISTS SNOWFLAKE_EXAMPLE CASCADE;
-DROP WAREHOUSE IF EXISTS SFE_SIMPLE_STREAM_WH;
 DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
 ```
 
@@ -331,8 +331,9 @@ DROP API INTEGRATION IF EXISTS SFE_GIT_API_INTEGRATION;
 - All pipes (`sfe_*_pipe`)
 - All tables and views
 - All schemas (except `DEMO_REPO` which contains Git repo and procedures)
-- Warehouse `SFE_SIMPLE_STREAM_WH`
 - API Integration `SFE_GIT_API_INTEGRATION`
+
+**Note:** No warehouse cleanup needed - tasks use serverless compute
 
 **What's preserved for audit:**
 - Database `SNOWFLAKE_EXAMPLE` (can be dropped manually if desired)

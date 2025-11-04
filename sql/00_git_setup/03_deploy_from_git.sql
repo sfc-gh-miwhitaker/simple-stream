@@ -28,7 +28,7 @@
  * PREREQUISITES:
  *   - sql/00_git_setup/01_git_repository_setup.sql executed
  *   - sql/00_git_setup/02_configure_secrets.sql executed
- *   - SFE_SIMPLE_STREAM_WH warehouse created (or use existing warehouse)
+ *   - Uses serverless tasks (no warehouse needed)
  * 
  * USAGE:
  *   Execute this entire file in Snowsight Workspaces (Projects → Workspaces → + SQL File)
@@ -41,7 +41,7 @@
 
 -- Set context
 USE ROLE SYSADMIN;
-USE WAREHOUSE SFE_SIMPLE_STREAM_WH;  -- Uses dedicated demo warehouse
+-- No warehouse needed - tasks use serverless compute
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
 /*******************************************************************************

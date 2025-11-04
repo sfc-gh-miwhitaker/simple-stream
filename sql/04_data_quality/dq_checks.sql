@@ -340,11 +340,11 @@ ORDER BY measurement_hour DESC, violation_count DESC;
 -- Step 9: Create Alerting Task (Optional)
 -- ============================================================================
 
--- Task to check for violations and send alerts
+-- Task to check for violations and send alerts (SERVERLESS)
 CREATE OR REPLACE TASK sfe_alert_on_data_quality_violations
-  WAREHOUSE = SFE_SIMPLE_STREAM_WH
+  USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE = 'XSMALL'
   SCHEDULE = '5 MINUTE'
-  COMMENT = 'DEMO: sfe-simple-stream - Alert task for data quality violations'
+  COMMENT = 'DEMO: sfe-simple-stream - Serverless alert task for data quality violations'
 WHEN
   SYSTEM$STREAM_HAS_DATA('CHECK_FOR_VIOLATIONS_STREAM')
 AS

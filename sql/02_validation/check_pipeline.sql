@@ -199,17 +199,18 @@ WHERE database_name = 'SNOWFLAKE_EXAMPLE'
 ORDER BY scheduled_time DESC;
 
 -- ============================================================================
--- CHECK 14: Warehouse Credit Usage for Tasks
+-- CHECK 14: Serverless Task Credit Usage
 -- ============================================================================
 SELECT 
-    warehouse_name,
+    task_name,
     SUM(credits_used) AS total_credits,
     COUNT(*) AS execution_count,
     ROUND(AVG(credits_used), 4) AS avg_credits_per_run
-FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
-WHERE warehouse_name = 'SFE_SIMPLE_STREAM_WH'
+FROM SNOWFLAKE.ACCOUNT_USAGE.SERVERLESS_TASK_HISTORY
+WHERE task_name LIKE 'sfe_%'
   AND start_time >= DATEADD('hour', -2, CURRENT_TIMESTAMP())
-GROUP BY warehouse_name;
+GROUP BY task_name
+ORDER BY total_credits DESC;
 
 -- ============================================================================
 -- CHECK 15: Compare Row Counts Across All Layers

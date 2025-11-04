@@ -26,7 +26,7 @@
 USE ROLE SYSADMIN;
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA DEMO_REPO;
-USE WAREHOUSE SFE_SIMPLE_STREAM_WH;  -- Uses dedicated demo warehouse
+-- No warehouse needed - procedures called by serverless tasks
 
 /*******************************************************************************
  * PROCEDURE: SFE_DEPLOY_PIPELINE()

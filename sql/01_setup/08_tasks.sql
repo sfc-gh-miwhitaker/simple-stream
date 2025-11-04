@@ -9,21 +9,21 @@
  *   stream-based CDC triggers. Demonstrates event-driven ETL pattern.
  * 
  * OBJECTS CREATED:
- *   - SFE_SIMPLE_STREAM_WH (Warehouse) - Dedicated task execution warehouse
- *   - sfe_raw_to_staging_task (Task) - RAW → STAGING with deduplication
+ *   - sfe_raw_to_staging_task (Serverless Task) - RAW → STAGING with deduplication
  *   - sfe_process_badge_events (Procedure) - Analytics layer processing
- *   - sfe_staging_to_analytics_task (Task) - STAGING → ANALYTICS
+ *   - sfe_staging_to_analytics_task (Serverless Task) - STAGING → ANALYTICS
  * 
  * TASK CHAIN:
  *   1. sfe_raw_to_staging_task: RAW → STG (deduplication with QUALIFY)
  *   2. sfe_staging_to_analytics_task: STG → ANALYTICS (MERGE, SCD updates)
  * 
  * KEY FEATURES:
+ *   - Serverless compute (no warehouse management needed)
  *   - Event-driven execution (SYSTEM$STREAM_HAS_DATA)
  *   - 1-minute schedule for near-real-time processing
  *   - QUALIFY for efficient deduplication
  *   - Type 2 SCD maintenance
- *   - Automatic warehouse management
+ *   - Automatic scaling and cost optimization
  * 
  * CLEANUP:
  *   See sql/99_cleanup/teardown_all.sql for complete removal
@@ -32,30 +32,24 @@
 USE DATABASE SNOWFLAKE_EXAMPLE;
 
 /*******************************************************************************
- * Create Dedicated Warehouse for Task Execution
+ * Task 1: Raw to Staging (Deduplication) - SERVERLESS
  * 
- * SFE_SIMPLE_STREAM_WH isolates demo compute costs from production
- ******************************************************************************/
-
-CREATE WAREHOUSE IF NOT EXISTS SFE_SIMPLE_STREAM_WH
-WITH WAREHOUSE_SIZE = 'XSMALL'
-     AUTO_SUSPEND = 60  -- Suspend after 1 minute of inactivity
-     AUTO_RESUME = TRUE
-     INITIALLY_SUSPENDED = TRUE
-     COMMENT = 'DEMO: sfe-simple-stream - Dedicated warehouse for task execution';
-
-/*******************************************************************************
- * Task 1: Raw to Staging (Deduplication)
- * 
+ * Uses Snowflake-managed serverless compute (no warehouse needed)
  * Reads from sfe_badge_events_stream and deduplicates using QUALIFY
+ * 
+ * SERVERLESS BENEFITS:
+ *   - No warehouse sizing decisions
+ *   - Automatic scaling based on workload
+ *   - Pay only for actual compute used
+ *   - Snowflake optimizes compute size from task history
  ******************************************************************************/
 
 USE SCHEMA RAW_INGESTION;
 
 CREATE OR REPLACE TASK sfe_raw_to_staging_task
-    WAREHOUSE = SFE_SIMPLE_STREAM_WH
+    USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE = 'XSMALL'  -- Initial size hint for first runs
     SCHEDULE = '1 MINUTE'
-    COMMENT = 'DEMO: sfe-simple-stream - Incremental ETL: RAW → STAGING with deduplication'
+    COMMENT = 'DEMO: sfe-simple-stream - Serverless task: RAW → STAGING with deduplication'
 WHEN
     SYSTEM$STREAM_HAS_DATA('sfe_badge_events_stream')
 AS
@@ -191,15 +185,16 @@ END;
 $$;
 
 /*******************************************************************************
- * Task 2: Staging to Analytics (Dimension and Fact Updates)
+ * Task 2: Staging to Analytics (Dimension and Fact Updates) - SERVERLESS
  * 
  * Runs after sfe_raw_to_staging_task completes
+ * Uses serverless compute for automatic scaling
  ******************************************************************************/
 
 CREATE OR REPLACE TASK sfe_staging_to_analytics_task
-    WAREHOUSE = SFE_SIMPLE_STREAM_WH
+    USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE = 'XSMALL'  -- Initial size hint for first runs
     AFTER sfe_raw_to_staging_task
-    COMMENT = 'DEMO: sfe-simple-stream - Incremental ETL: STAGING → ANALYTICS'
+    COMMENT = 'DEMO: sfe-simple-stream - Serverless task: STAGING → ANALYTICS'
 AS
     CALL sfe_process_badge_events();
 
@@ -254,20 +249,36 @@ SHOW TASKS LIKE 'sfe_%' IN DATABASE SNOWFLAKE_EXAMPLE;
  ******************************************************************************/
 
 /*******************************************************************************
- * PERFORMANCE TUNING
+ * PERFORMANCE TUNING (SERVERLESS TASKS)
  * 
- * If tasks are running slowly:
- *   1. Increase warehouse size:
- *      ALTER WAREHOUSE SFE_SIMPLE_STREAM_WH SET WAREHOUSE_SIZE = 'SMALL';
- *   
- *   2. Adjust auto-suspend to keep warehouse warm:
- *      ALTER WAREHOUSE SFE_SIMPLE_STREAM_WH SET AUTO_SUSPEND = 300;  -- 5 minutes
- *   
- *   3. Consider batch processing (5-minute schedule instead of 1-minute):
- *      ALTER TASK sfe_raw_to_staging_task SET SCHEDULE = '5 MINUTE';
- *   
- *   4. Monitor warehouse usage:
- *      SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
- *      WHERE WAREHOUSE_NAME = 'SFE_SIMPLE_STREAM_WH'
- *      ORDER BY START_TIME DESC;
+ * Serverless tasks automatically scale, but you can optimize:
+ * 
+ * 1. Snowflake learns optimal size from task history
+ *    - First runs use USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE
+ *    - Subsequent runs are auto-optimized based on actual workload
+ * 
+ * 2. Adjust initial size hint if needed:
+ *    ALTER TASK sfe_raw_to_staging_task SET 
+ *      USER_TASK_MANAGED_INITIAL_WAREHOUSE_SIZE = 'SMALL';
+ * 
+ * 3. Consider batch processing (reduce frequency):
+ *    ALTER TASK sfe_raw_to_staging_task SET SCHEDULE = '5 MINUTE';
+ * 
+ * 4. Monitor serverless task costs:
+ *    SELECT 
+ *      task_name,
+ *      SUM(credits_used) as total_credits,
+ *      COUNT(*) as execution_count,
+ *      AVG(credits_used) as avg_credits_per_run
+ *    FROM SNOWFLAKE.ACCOUNT_USAGE.SERVERLESS_TASK_HISTORY
+ *    WHERE task_name LIKE 'sfe_%'
+ *    GROUP BY task_name
+ *    ORDER BY total_credits DESC;
+ * 
+ * WHY SERVERLESS?
+ *   ✅ No warehouse sizing decisions
+ *   ✅ Automatic scaling based on workload
+ *   ✅ Pay only for actual execution time
+ *   ✅ Snowflake optimizes compute from task history
+ *   ✅ No idle warehouse costs
  ******************************************************************************/
