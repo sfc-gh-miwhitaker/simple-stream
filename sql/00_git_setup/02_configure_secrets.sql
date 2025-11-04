@@ -15,21 +15,22 @@
  * 
  * DEPENDENCIES:
  *   - sql/00_git_setup/01_git_repository_setup.sql (must run first)
+ *   - Git workspace created in Snowsight
  *   - RSA key pair generated (see config/jwt_keypair_setup.md)
  * 
- * ⚠️  IMPORTANT: This script requires manual editing with your credentials!
+ * WORKFLOW:
+ *   1. Run queries to GET your account identifier and username (see below)
+ *   2. Copy the values into the SECRET_STRING fields
+ *   3. Generate RSA key pair (instructions provided)
+ *   4. Copy private key into the secret
+ *   5. Run the entire script to create all secrets
  * 
- * USAGE:
- *   1. Find your account identifier (see instructions below)
- *   2. Get your username from Snowsight
- *   3. Generate and copy your private key
- *   4. Update the SECRET_STRING values below
- *   5. Execute in Snowsight: Projects → Workspaces → + SQL File → Run All
+ * TIP: Run the SELECT queries first to see your values, then edit and run all!
  * 
  * CLEANUP:
  *   sql/99_cleanup/teardown_all.sql
  * 
- * ESTIMATED TIME: 5 seconds (after manual edits)
+ * ESTIMATED TIME: 2 minutes (includes key generation)
  ******************************************************************************/
 
 USE ROLE ACCOUNTADMIN;
@@ -37,48 +38,79 @@ USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA DEMO_REPO;
 
 -- ============================================================================
--- STEP 1: Store Account Identifier
+-- STEP 1: Find Your Account Identifier (Choose One Method)
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- METHOD 1: Get from Snowsight UI (Easiest)
+-- ---------------------------------------------------------------------------
 -- 
--- 📋 How to find your account identifier:
---   1. Look at your Snowsight URL: https://<ACCOUNT>.snowflakecomputing.com
---   2. Or run: SELECT CURRENT_ACCOUNT();
---   3. Format: ORGNAME-ACCOUNTNAME (e.g., MYORG-DEMO123)
---   4. Use UPPERCASE for consistency
+-- 1. In Snowsight, click your username (top-right corner)
+-- 2. Select "Account" from the dropdown
+-- 3. Look for "Account identifier" in the popup
+--    OR
+-- 1. Go to Admin → Accounts
+-- 2. Click "Connect a tool to Snowflake" 
+-- 3. Copy the account identifier shown
 -- 
--- Examples:
---   - 'ACME-PROD456'
---   - 'MYCOMPANY-DEV789'
---   - 'TESTORG-SANDBOX001'
+-- Format: ORGNAME-ACCOUNTNAME (e.g., MYORG-DEMO123)
 -- 
+
+-- ---------------------------------------------------------------------------
+-- METHOD 2: Get Programmatically (Run this query)
+-- ---------------------------------------------------------------------------
+-- 
+-- Run this to extract your account identifier:
+
+SELECT 
+    CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() AS account_identifier,
+    'Copy the value above and paste into SECRET_STRING below' AS instruction;
+
+-- Example output: MYORG-ACCOUNT123
+--
+
+-- ============================================================================
+-- STEP 2: Store Account Identifier as Secret
+-- ============================================================================
 
 CREATE OR REPLACE SECRET SFE_SS_ACCOUNT
   TYPE = GENERIC_STRING
-  SECRET_STRING = 'YOUR_ACCOUNT_IDENTIFIER'  -- ⚠️ EDIT THIS: e.g., 'MYORG-ACCOUNT123'
+  SECRET_STRING = 'YOUR_ACCOUNT_IDENTIFIER'  -- ⚠️ EDIT THIS: Paste the value from above
   COMMENT = 'DEMO: sfe-simple-stream - Snowflake account identifier for REST API';
 
 -- ============================================================================
--- STEP 2: Store Username
+-- STEP 3: Find Your Username (Choose One Method)
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- METHOD 1: Get from Snowsight UI
+-- ---------------------------------------------------------------------------
 -- 
--- 📋 How to find your username:
---   1. Look at top-right corner of Snowsight
---   2. Or run: SELECT CURRENT_USER();
---   3. Use the exact username (case-sensitive)
+-- Look at the top-right corner of Snowsight - your username is displayed there
 -- 
--- Examples:
---   - 'JSMITH'
---   - 'john.smith@company.com'
---   - 'DEMO_USER'
--- 
+
+-- ---------------------------------------------------------------------------
+-- METHOD 2: Get Programmatically (Run this query)
+-- ---------------------------------------------------------------------------
+
+SELECT 
+    CURRENT_USER() AS username,
+    'Copy the value above and paste into SECRET_STRING below' AS instruction;
+
+-- Example output: JSMITH
+--
+
+-- ============================================================================
+-- STEP 4: Store Username as Secret
+-- ============================================================================
 
 CREATE OR REPLACE SECRET SFE_SS_USER
   TYPE = GENERIC_STRING
-  SECRET_STRING = 'YOUR_USERNAME'  -- ⚠️ EDIT THIS: Your Snowflake username
+  SECRET_STRING = 'YOUR_USERNAME'  -- ⚠️ EDIT THIS: Paste the value from above
   COMMENT = 'DEMO: sfe-simple-stream - Snowflake user for JWT authentication';
 
 -- ============================================================================
--- STEP 3: Store RSA Private Key
+-- STEP 5: Store RSA Private Key
 -- ============================================================================
 -- 
 -- 📋 How to get your private key:
