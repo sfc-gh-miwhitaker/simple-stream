@@ -1,58 +1,24 @@
 /*******************************************************************************
- * DEMO PROJECT: sfe-simple-stream
- * Script: Raw Landing Table Creation
- * 
- * ⚠️  NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
- * 
- * PURPOSE:
- *   Create the raw landing table for RFID badge events ingested via
- *   Snowpipe Streaming REST API. This table receives data directly
- *   from the PIPE object with in-flight transformations applied.
- * 
- * OBJECTS CREATED:
- *   - RAW_BADGE_EVENTS (Table) - Snowpipe Streaming target table
- * 
- * TARGET:
- *   SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS
- * 
- * SOURCE:
- *   RFID vendor system via Snowpipe Streaming REST API
- * 
- * CLEANUP:
- *   See sql/99_cleanup/teardown_all.sql for complete removal
+ * DEMO PROJECT: sfe-simple-stream | Script: Raw Landing Table
+ * ⚠️ NOT FOR PRODUCTION USE - EXAMPLE IMPLEMENTATION ONLY
+ * PURPOSE: Create RAW_BADGE_EVENTS Snowpipe streaming target.
+ * OBJECTS: RAW_BADGE_EVENTS
+ * CLEANUP: sql/99_cleanup/teardown_all.sql
  ******************************************************************************/
 
 USE DATABASE SNOWFLAKE_EXAMPLE;
 USE SCHEMA RAW_INGESTION;
 
--- Create raw landing table
 CREATE OR REPLACE TABLE RAW_BADGE_EVENTS (
-    -- Primary identifiers
-    badge_id VARCHAR(50) NOT NULL COMMENT 'Unique badge identifier (e.g., BADGE-12345)',
-    user_id VARCHAR(50) NOT NULL COMMENT 'User associated with badge (e.g., USR-001)',
-    
-    -- Location and device information
-    zone_id VARCHAR(50) NOT NULL COMMENT 'Zone where event occurred (e.g., ZONE-LOBBY-1)',
-    reader_id VARCHAR(50) NOT NULL COMMENT 'Badge reader that captured event (e.g., RDR-101)',
-    
-    -- Event timing
-    event_timestamp TIMESTAMP_NTZ NOT NULL COMMENT 'Timestamp when badge was scanned (timezone-naive)',
-    
-    -- Signal information
-    signal_strength NUMBER(5, 2) COMMENT 'RFID signal strength in dBm (-999 if unknown)',
-    signal_quality VARCHAR(10) COMMENT 'Signal quality: WEAK, MEDIUM, STRONG',
-    
-    -- Event details
-    direction VARCHAR(10) COMMENT 'Direction of movement: ENTRY, EXIT, or null',
-    
-    -- Audit columns
-    ingestion_time TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() COMMENT 'When record was ingested into Snowflake',
-    raw_json VARIANT COMMENT 'Original JSON payload for debugging'
+    badge_id VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    zone_id VARCHAR(50) NOT NULL,
+    reader_id VARCHAR(50) NOT NULL,
+    event_timestamp TIMESTAMP_NTZ NOT NULL,
+    signal_strength NUMBER(5, 2),
+    signal_quality VARCHAR(10),
+    direction VARCHAR(10),
+    ingestion_time TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+    raw_json VARIANT
 )
 COMMENT = 'DEMO: sfe-simple-stream - Raw RFID badge events ingested via Snowpipe Streaming REST API';
-
--- Note: event_timestamp NOT NULL constraint enforced in column definition above
--- Snowflake uses micro-partitions for automatic optimization; explicit indexes not needed
-
--- Display table structure
-DESCRIBE TABLE RAW_BADGE_EVENTS;
