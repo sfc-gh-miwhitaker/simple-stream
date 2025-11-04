@@ -146,7 +146,7 @@ Want to send a single event via REST? Follow the step-by-step instructions in [`
 
 ## Guided Customer Lab
 
-Need the storyline for executives and integrators? Start with [`docs/LAB_GUIDE.md`](docs/LAB_GUIDE.md). It compresses the deployment into five phases, spotlights the Snowpipe Streaming GA enhancements, and arms partners with the instructions they need even if they cannot run the full lab immediately.
+Need the storyline for executives and integrators? Follow the numbered guides `docs/01-SETUP.md` through `docs/05-MONITORING.md`. They provide a complete walkthrough from prerequisites to production monitoring.
 
 ## Project Structure
 
@@ -226,7 +226,8 @@ Property access control with RFID badges:
 | `docs/03-CONFIGURATION.md` | Configure JWT authentication and `.env` settings |
 | `docs/04-RUNNING.md` | Run the simulator and validate pipeline health |
 | `docs/05-MONITORING.md` | Monitor, troubleshoot, and optimize the pipeline |
-| `docs/PLATFORM_GUIDE.md` | Platform-specific notes for Windows, macOS, Linux |
+| ~~`docs/PLATFORM_GUIDE.md`~~ | *(Optional - platform notes, not yet created)* |
+| ~~`docs/LAB_GUIDE.md`~~ | *(Optional - executive narrative, not yet created)* |
 | `docs/REST_API_GUIDE.md` | REST API reference and advanced ingestion patterns |
 | `docs/ARCHITECTURE.md` | Detailed architecture and design decisions |
 | `docs/DATA_DICTIONARY.md` | Dimension and fact table definitions |
@@ -294,7 +295,7 @@ SELECT * FROM V_END_TO_END_LATENCY;
 SELECT * FROM V_PARTITION_EFFICIENCY;
 ```
 
-For live dashboards, save these queries in Snowsight Workspaces or your BI tool of choice and point stakeholders to the quick narrative in [`docs/LAB_GUIDE.md`](docs/LAB_GUIDE.md) (Phase 4) for recommended charts and KPIs.
+For live dashboards, save these queries in Snowsight Workspaces or your BI tool of choice. See [`docs/05-MONITORING.md`](docs/05-MONITORING.md) for recommended charts, KPIs, and dashboard templates.
 
 ## Getting Updates
 
