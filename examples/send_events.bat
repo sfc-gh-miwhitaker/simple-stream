@@ -21,7 +21,18 @@ REM ============================================================================
 set ACCOUNT_ID=YOUR_ORG-YOUR_ACCOUNT
 set USERNAME=sfe_ingest_user
 set PRIVATE_KEY_PATH=rsa_key.p8
-set PIPE_ENDPOINT=https://%ACCOUNT_ID%.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE/insertRows
+
+REM Convert underscores to hyphens and to lowercase for URL (Snowflake requires this)
+set ACCOUNT_URL=%ACCOUNT_ID:_=-%
+call :LCase ACCOUNT_URL
+set PIPE_ENDPOINT=https://%ACCOUNT_URL%.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe/insertRows
+goto :skip_lcase
+
+:LCase
+for %%L IN (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z) DO SET %1=!%1:%%L=%%L!
+exit /b
+
+:skip_lcase
 
 REM ============================================================================
 REM Validate prerequisites

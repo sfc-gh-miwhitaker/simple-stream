@@ -66,15 +66,10 @@ USE ROLE ACCOUNTADMIN;
 DROP SCHEMA IF EXISTS SNOWFLAKE_EXAMPLE.DEMO_REPO CASCADE;
 
 -- ============================================================================
--- STEP 4: Drop Warehouse (Keep API Integration for Reuse)
+-- STEP 4: Shared Warehouse (No Drop Required)
 -- ============================================================================
--- Account-level objects (already using ACCOUNTADMIN from previous step)
--- NOTE: API Integration (SFE_GIT_API_INTEGRATION) is intentionally preserved
---       as it may be shared across multiple demo projects
-
-USE ROLE ACCOUNTADMIN;
-
-DROP WAREHOUSE IF EXISTS SFE_SIMPLE_STREAM_WH;
+-- Using pre-existing COMPUTE_WH for this demo, so there is no dedicated
+-- warehouse to remove during teardown. API Integration is preserved as well.
 
 -- ============================================================================
 -- VERIFICATION (Optional - run to confirm cleanup)
@@ -84,9 +79,6 @@ USE ROLE ACCOUNTADMIN;
 
 -- Verify API Integration still exists (should be preserved)
 SHOW API INTEGRATIONS LIKE 'SFE_GIT%';
-
--- Verify warehouse was removed (should return no results)
-SHOW WAREHOUSES LIKE 'SFE_SIMPLE_STREAM%';
 
 -- Verify SNOWFLAKE_EXAMPLE database still exists but demo schemas are gone
 SHOW SCHEMAS IN DATABASE SNOWFLAKE_EXAMPLE;

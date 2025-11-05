@@ -21,6 +21,7 @@ dist/
 private_key*
 public_key*
 rsa_key*
+examples/rsa_key.p8
 *.crt
 
 # Internal development notes

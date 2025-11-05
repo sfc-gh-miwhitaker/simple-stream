@@ -18,10 +18,13 @@ set -e  # Exit on error
 # CONFIGURATION - Update these values from sql/07_api_handoff.sql output
 # ============================================================================
 
-ACCOUNT_ID="YOUR_ORG-YOUR_ACCOUNT"           # e.g., "SFSENORTHAMERICA-MWHITAKER_AWS"
+ACCOUNT_ID="YOUR_ORG-YOUR_ACCOUNT"                    # e.g., "MYORG-MYACCOUNT"
 USERNAME="sfe_ingest_user"
 PRIVATE_KEY_PATH="./rsa_key.p8"
-PIPE_ENDPOINT="https://${ACCOUNT_ID}.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE/insertRows"
+
+# Convert underscores to hyphens for URL (Snowflake requires this)
+ACCOUNT_URL=$(echo "$ACCOUNT_ID" | tr '_' '-' | tr '[:upper:]' '[:lower:]')
+PIPE_ENDPOINT="https://${ACCOUNT_URL}.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE/insertRows"
 
 # ============================================================================
 # Validate prerequisites
@@ -101,7 +104,7 @@ class SnowpipeAuthManager:
     
     def get_token(self):
         """Get current token, refresh if needed"""
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         
         # Generate new token if none exists or expires in < 5 min
         if not self.token or not self.token_expiry or \
@@ -112,7 +115,7 @@ class SnowpipeAuthManager:
     
     def _generate_token(self):
         """Generate new JWT token"""
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         qualified_username = f"{self.account_id}.{self.username}"
         
         payload = {
@@ -166,7 +169,7 @@ def main():
             "user_id": "USR-001",
             "zone_id": "ZONE-LOBBY-1",
             "reader_id": "RDR-101",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -65.5,
             "direction": "ENTRY"
         },
@@ -175,7 +178,7 @@ def main():
             "user_id": "USR-002",
             "zone_id": "ZONE-OFFICE-A",
             "reader_id": "RDR-102",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -58.2,
             "direction": "ENTRY"
         },
@@ -184,7 +187,7 @@ def main():
             "user_id": "USR-001",
             "zone_id": "ZONE-OFFICE-A",
             "reader_id": "RDR-103",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -62.1,
             "direction": "ENTRY"
         }

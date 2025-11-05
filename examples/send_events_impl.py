@@ -32,7 +32,7 @@ class SnowpipeAuthManager:
     
     def get_token(self):
         """Get current token, refresh if needed"""
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         
         # Generate new token if none exists or expires in < 5 min
         if not self.token or not self.token_expiry or \
@@ -43,7 +43,7 @@ class SnowpipeAuthManager:
     
     def _generate_token(self):
         """Generate new JWT token"""
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         qualified_username = f"{self.account_id}.{self.username}"
         
         payload = {
@@ -107,7 +107,7 @@ def main():
             "user_id": "USR-001",
             "zone_id": "ZONE-LOBBY-1",
             "reader_id": "RDR-101",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -65.5,
             "direction": "ENTRY"
         },
@@ -116,7 +116,7 @@ def main():
             "user_id": "USR-002",
             "zone_id": "ZONE-OFFICE-A",
             "reader_id": "RDR-102",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -58.2,
             "direction": "ENTRY"
         },
@@ -125,7 +125,7 @@ def main():
             "user_id": "USR-001",
             "zone_id": "ZONE-OFFICE-A",
             "reader_id": "RDR-103",
-            "event_timestamp": datetime.datetime.utcnow().isoformat(),
+            "event_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "signal_strength": -62.1,
             "direction": "ENTRY"
         }

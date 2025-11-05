@@ -16,22 +16,23 @@ This outputs your `ACCOUNT_ID` and complete configuration.
 
 ### 2. Place Private Key
 
-Copy `rsa_key.p8` (generated in `sql/06_configure_auth.sql`) to this directory:
+Generate `rsa_key.p8` using the steps in `sql/06_configure_auth.sql` and keep it outside source control. When running the demo locally, place a copy alongside the scripts (never commit it):
 
 ```bash
 examples/
-  ├── rsa_key.p8          # Your private key (DO NOT COMMIT)
   ├── send_events.sh      # Unix/Mac demo
   ├── send_events.bat     # Windows demo
   └── send_events_impl.py # Shared Python code
 ```
+
+> Note: `rsa_key.p8` stays on your workstation or secrets vault only. Copy it into this folder temporarily when testing, then delete it afterwards.
 
 ### 3. Configure Script
 
 Edit `send_events.sh` (or `send_events.bat` on Windows) and update:
 
 ```bash
-ACCOUNT_ID="YOUR_ORG-YOUR_ACCOUNT"  # e.g., "SFSENORTHAMERICA-MWHITAKER_AWS"
+ACCOUNT_ID="YOUR_ORG-YOUR_ACCOUNT"  # e.g., "MYORG-MYACCOUNT"
 ```
 
 ### 4. Run Demo
@@ -65,7 +66,7 @@ Snowpipe Streaming Event Sender
 
 ✓ Python 3 found: Python 3.11.5
 ✓ Private key found: ./rsa_key.p8
-✓ Account ID: SFSENORTHAMERICA-MWHITAKER_AWS
+✓ Account ID: MYORG-MYACCOUNT
 
 ================================================================
 Initializing Authentication

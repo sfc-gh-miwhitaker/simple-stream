@@ -14,6 +14,7 @@ CALL SYSTEM$WAIT(2);
 
 -- Task 1: Deduplicate RAW to STAGING (runs every 1 minute)
 CREATE OR REPLACE TASK sfe_raw_to_staging_task
+    WAREHOUSE = COMPUTE_WH
     SCHEDULE = '1 MINUTE'
     COMMENT = 'DEMO: Deduplication task'
 WHEN SYSTEM$STREAM_HAS_DATA('sfe_badge_events_stream')
@@ -135,6 +136,7 @@ $$;
 USE SCHEMA RAW_INGESTION;
 
 CREATE OR REPLACE TASK sfe_staging_to_analytics_task
+    WAREHOUSE = COMPUTE_WH
     COMMENT = 'DEMO: Enrichment task'
     AFTER sfe_raw_to_staging_task
 AS
