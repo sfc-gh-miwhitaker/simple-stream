@@ -1,0 +1,8 @@
+{
+  "account_host": "myorg-myaccount.snowflakecomputing.com",
+  "username": "MY_SERVICE_USER",
+  "private_key_path": "./keys/rsa_key.p8",
+  "pipe_name": "SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE",
+  "channel_name": "demo_channel",
+  "sample_events": 3
+}

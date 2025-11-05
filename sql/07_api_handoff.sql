@@ -16,8 +16,9 @@ SELECT
 SNOWPIPE STREAMING API - DATA PROVIDER HANDOFF
 ================================================================================
 
-ENDPOINT URL:
-  https://' || LOWER(REPLACE(CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME(), '_', '-')) || '.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.sfe_badge_events_pipe/insertRows
+BASE CONFIGURATION:
+  Control plane URL: https://' || LOWER(REPLACE(CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME(), '_', '-')) || '.snowflakecomputing.com
+  Target table:      SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS
 
 CREDENTIALS:
   Account:      ' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '
@@ -28,38 +29,35 @@ CREDENTIALS:
 AUTH METHOD:
   Key Pair JWT (RSA 2048-bit)
 
-JSON SCHEMA (Required Fields):
-  badge_id, user_id, zone_id, reader_id, event_timestamp (ISO 8601)
+SIMPLE SQL API WORKFLOW:
+  1. Generate a JWT using the private key (valid for ~59 minutes)
+  2. Call https://<control_host>/api/v2/statements with Authorization: Bearer <jwt_token>
+  3. Execute INSERT statements into SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS
+  4. Optional: poll the SQL API status endpoint until the statement reports success
 
 --------------------------------------------------------------------------------
 QUICKSTART DEMO
 --------------------------------------------------------------------------------
 
-Working scripts with JWT token management and sample data:
+Working scripts that demonstrate the SQL API workflow:
 
-  https://github.com/USERNAME/simple-stream/tree/main/examples
+  https://github.com/sfc-gh-miwhitaker/sfe-simple-stream/tree/main/examples
 
   Unix/Mac:  ./send_events.sh
   Windows:   send_events.bat
 
-Includes:
-  - Production-ready SnowpipeAuthManager class
-  - Auto-refreshing JWT tokens (59-min lifespan, 5-min pre-refresh)
-  - Complete error handling and troubleshooting
-  - Sample events demonstrating API usage
-
-Edit script and set ACCOUNT_ID=' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '
+Scripts prompt for ACCOUNT_ID updates, generate the JWT, run a three-row INSERT via the SQL API, and print a success message.
 
 --------------------------------------------------------------------------------
 DOCUMENTATION
 --------------------------------------------------------------------------------
 
 Complete Guide:
-  https://github.com/USERNAME/simple-stream/blob/main/examples/README.md
+  https://github.com/sfc-gh-miwhitaker/sfe-simple-stream/blob/main/examples/README.md
 
 Snowflake Docs:
-  https://docs.snowflake.com/en/user-guide/data-load-snowpipe-streaming
-  https://docs.snowflake.com/en/developer-guide/sql-api/authenticating
+  https://docs.snowflake.com/en/developer-guide/sql-api/intro
+  https://docs.snowflake.com/en/user-guide/key-pair-auth
 
 --------------------------------------------------------------------------------
 MONITORING VIEWS

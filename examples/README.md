@@ -1,200 +1,111 @@
-# Snowpipe Streaming Examples
+# Snowpipe Streaming Demo
 
-Working examples demonstrating how to send data to your Snowflake pipe using JWT authentication.
+This directory provides a minimal, repeatable example of Snowflake's **Snowpipe Streaming (high-performance)** REST API. The helper script generates a JWT from an RSA private key, discovers the ingest host, opens a streaming channel, appends a few badge events, and closes the channel.
 
-## Quick Start
+## Files
 
-### 1. Get Credentials
+| File | Purpose |
+| ---- | ------- |
+| `config.example.json` | Template configuration (copy to `config.json` and edit). |
+| `send_events_stream.py` | Python helper that calls the streaming REST endpoints. |
+| `send_events.sh` / `send_events.bat` | Unix / Windows wrappers that invoke the helper from any directory. |
+| `.gitignore` | Keeps local config, keys, and virtual environments out of source control. |
 
-Run the API handoff script in Snowflake:
+## Prerequisites
 
-```sql
-@sql/07_api_handoff.sql
+- Snowflake account with the demo objects deployed (see `sql/01_core.sql`, `sql/03_tasks.sql`, etc.).
+- Service account (e.g. `sfe_ingest_user`) with INSERT privileges on the streaming pipe (`SFE_BADGE_EVENTS_PIPE`).
+- RSA 2048-bit key pair (private key stored locally, public key registered on the Snowflake user).
+- Python 3.9+ with `pip` (the helper uses `requests`, `PyJWT`, and `cryptography`).
+
+## Quick Start (Unix/macOS)
+
+1. **Generate RSA key pair** (PKCS#8, unencrypted):
+   ```bash
+   mkdir -p keys
+   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out keys/rsa_key.p8 -nocrypt
+   openssl rsa -in keys/rsa_key.p8 -pubout -outform DER | openssl base64 -A > keys/rsa_key.pub.b64
+   ``
+2. **Register public key with Snowflake** (copy the single-line base64 string):
+   ```bash
+   pbcopy < keys/rsa_key.pub.b64  # macOS clipboard helper
+   ```
+   ```sql
+   ALTER USER sfe_ingest_user SET RSA_PUBLIC_KEY = '<paste clipboard here>';
+   DESCRIBE USER sfe_ingest_user;  -- note RSA_PUBLIC_KEY_FP
+   ```
+3. **Create config** from template:
+   ```bash
+   cp config.example.json config.json
+   ```
+   Edit `config.json`:
+   - `account_host`: e.g. `myorg-myaccount.snowflakecomputing.com`
+   - `username`: Snowflake service user (e.g. `SFE_INGEST_USER`)
+   - `private_key_path`: relative or absolute path to `rsa_key.p8`
+   - `pipe_name`: fully-qualified pipe (e.g. `SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE`)
+4. **(Optional) Create virtual environment**:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install requests PyJWT cryptography
+   ```
+5. **Run the demo**:
+   ```bash
+   ./send_events.sh
+   ```
+6. **Verify data** in Snowflake:
+   ```sql
+   SELECT *
+   FROM SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS
+   ORDER BY ingestion_time DESC
+   LIMIT 10;
+   ```
+
+## Quick Start (Windows)
+
+1. Generate keys (PowerShell or Git Bash) and copy `keys/rsa_key.pub.b64` content.
+2. Register the public key with Snowflake (`ALTER USER ... SET RSA_PUBLIC_KEY = '...'`).
+3. Copy `config.example.json` to `config.json` and update the values.
+4. (Optional) Create virtual environment:
+   ```cmd
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install requests PyJWT cryptography
+   ```
+5. Run the wrapper:
+   ```cmd
+   send_events.bat
+   ```
+6. Verify the rows in Snowflake as shown above.
+
+## Script Output
+
+A successful run prints:
+
 ```
-
-This outputs your `ACCOUNT_ID` and complete configuration.
-
-### 2. Place Private Key
-
-Generate `rsa_key.p8` using the steps in `sql/06_configure_auth.sql` and keep it outside source control. When running the demo locally, place a copy alongside the scripts (never commit it):
-
-```bash
-examples/
-  ├── send_events.sh      # Unix/Mac demo
-  ├── send_events.bat     # Windows demo
-  └── send_events_impl.py # Shared Python code
+✓ Configuration loaded
+✓ Account host: https://<account_host>
+✓ Account identifier: <ORG_ACCOUNT>
+✓ RSA fingerprint: SHA256:...
+✓ JWT generated
+✓ Ingest host: https://<ingest_host>
+✓ Scoped token acquired
+✓ Channel opened: demo_channel_...
+✓ Appended 3 events (next token prefix: ...)
+✓ Channel closed
 ```
-
-> Note: `rsa_key.p8` stays on your workstation or secrets vault only. Copy it into this folder temporarily when testing, then delete it afterwards.
-
-### 3. Configure Script
-
-Edit `send_events.sh` (or `send_events.bat` on Windows) and update:
-
-```bash
-ACCOUNT_ID="YOUR_ORG-YOUR_ACCOUNT"  # e.g., "MYORG-MYACCOUNT"
-```
-
-### 4. Run Demo
-
-**Unix/Mac:**
-```bash
-chmod +x send_events.sh
-./send_events.sh
-```
-
-**Windows:**
-```cmd
-send_events.bat
-```
-
-## What It Does
-
-The demo script:
-
-1. **Validates prerequisites** - Checks Python, dependencies, private key
-2. **Generates JWT token** - Creates 59-minute token using private key
-3. **Sends 3 sample events** - Demonstrates actual data ingestion
-4. **Shows results** - HTTP status codes and troubleshooting tips
-
-### Sample Output
-
-```
-================================================================
-Snowpipe Streaming Event Sender
-================================================================
-
-✓ Python 3 found: Python 3.11.5
-✓ Private key found: ./rsa_key.p8
-✓ Account ID: MYORG-MYACCOUNT
-
-================================================================
-Initializing Authentication
-================================================================
-
-✓ JWT token generated (expires: 14:32:15)
-
-================================================================
-Sending Sample Events
-================================================================
-
-✓ Event 1/3: BADGE-001 -> ZONE-LOBBY-1 (HTTP 200)
-✓ Event 2/3: BADGE-002 -> ZONE-OFFICE-A (HTTP 200)
-✓ Event 3/3: BADGE-001 -> ZONE-OFFICE-A (HTTP 200)
-
-================================================================
-Summary
-================================================================
-Successfully sent: 3/3 events
-
-Next Steps:
-  1. Wait 1-2 minutes for data to arrive
-  2. Query in Snowflake:
-     SELECT * FROM SNOWFLAKE_EXAMPLE.RAW_INGESTION.RAW_BADGE_EVENTS;
-
-  3. Check metrics:
-     SELECT * FROM SNOWFLAKE_EXAMPLE.RAW_INGESTION.V_INGESTION_METRICS;
-```
-
-## Using in Production
-
-The `send_events_impl.py` file contains production-ready code you can adapt:
-
-### SnowpipeAuthManager Class
-
-```python
-# Initialize once at application startup
-auth = SnowpipeAuthManager(
-    private_key_path="rsa_key.p8",
-    account_id="YOUR_ORG-YOUR_ACCOUNT",
-    username="sfe_ingest_user"
-)
-
-# Use in your data ingestion loop
-def send_event(event_data):
-    token = auth.get_token()  # Auto-refreshes if needed
-    
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-    
-    response = requests.post(endpoint, json=event_data, headers=headers)
-    return response
-```
-
-### Key Features
-
-- **Thread-safe**: Uses locking for concurrent access
-- **Auto-refresh**: Regenerates token 5 minutes before expiry
-- **Performance**: Token generated once per hour, not per API call
-- **Zero downtime**: No service interruption during token refresh
 
 ## Troubleshooting
 
-### Error: "Invalid JWT token"
+| Symptom | Action |
+| ------- | ------ |
+| `RSA fingerprint ...` differs from `DESCRIBE USER` | Run `ALTER USER ... SET RSA_PUBLIC_KEY` again with the single-line base64 output. |
+| `SQL API request failed ... JWT token is invalid` | Run `SELECT SYSTEM$GET_LOGIN_FAILURE_DETAILS('<uuid>');` and check for fingerprint or account mismatch. |
+| `requests.exceptions.ConnectionError` | Ensure network access to `https://<account_host>` is allowed. |
+| `Config file not found` | Copy `config.example.json` to `config.json` and update placeholders. |
 
-- Verify `ACCOUNT_ID` format: `ORG-ACCOUNT` (uppercase, with hyphen)
-- Ensure public key is registered: Run `SHOW USERS LIKE 'sfe_ingest_user'` in Snowflake
-- Check token expiry: Token is valid for 59 minutes
+## Notes
 
-### Error: "HTTP 403 Forbidden"
-
-- User doesn't have INSERT privilege on pipe
-- Run in Snowflake: `SHOW GRANTS TO ROLE sfe_ingest_role;`
-- Should see: `INSERT` on `SFE_BADGE_EVENTS_PIPE`
-
-### Error: "HTTP 404 Not Found"
-
-- Pipe endpoint URL is incorrect
-- Verify pipe exists: `SHOW PIPES IN SCHEMA RAW_INGESTION;`
-- Check spelling: `SFE_BADGE_EVENTS_PIPE` (case-sensitive)
-
-### Events Not Appearing in Table
-
-- Wait 1-2 minutes for micro-batch processing
-- Check pipe status: `SELECT SYSTEM$PIPE_STATUS('SFE_BADGE_EVENTS_PIPE');`
-- Review errors: `SELECT * FROM TABLE(INFORMATION_SCHEMA.PIPE_USAGE_HISTORY());`
-
-## Security Notes
-
-**DO NOT commit `rsa_key.p8` to version control**
-
-Add to `.gitignore`:
-```
-examples/rsa_key.p8
-*.p8
-*.pem
-```
-
-**Store private key securely:**
-- Production: Use key vault (AWS Secrets Manager, Azure Key Vault, etc.)
-- Development: Keep in encrypted storage, restricted file permissions
-- Rotation: Regenerate keys every 90 days
-
-## Dependencies
-
-```bash
-pip install PyJWT cryptography requests
-```
-
-- `PyJWT`: JWT token generation
-- `cryptography`: RSA key handling
-- `requests`: HTTP client for API calls
-
-## Next Steps
-
-After successfully running the demo:
-
-1. Adapt `send_events_impl.py` for your data source
-2. Implement error handling and retry logic
-3. Add logging and monitoring
-4. Set up key rotation process
-5. Deploy to production environment
-
-## Support
-
-- **Snowflake Documentation**: https://docs.snowflake.com/en/user-guide/data-load-snowpipe-streaming
-- **JWT Authentication**: https://docs.snowflake.com/en/developer-guide/sql-api/authenticating
-- **Project Issues**: Contact your Snowflake administrator
-
+- The helper sends a short burst of events (default: 3). Adjust `sample_events` in `config.json` to send more.
+- Channels are created per run (`channel_name` in config). If a run is interrupted, you can delete the channel manually with `DELETE` or let Snowflake clean it up.
+- Keep `rsa_key.p8` secure. Update the Snowflake user key whenever you regenerate the private key.

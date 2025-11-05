@@ -71,6 +71,7 @@ Working demo scripts are provided in `examples/`:
 cd examples
 # Edit send_events.sh and update ACCOUNT_ID
 ./send_events.sh
+# The script uses the Snowflake SQL API to insert demo events directly into RAW_BADGE_EVENTS.
 ```
 
 **Windows:**
@@ -78,6 +79,7 @@ cd examples
 cd examples
 REM Edit send_events.bat and update ACCOUNT_ID
 send_events.bat
+REM The script calls the SQL API; verify the console shows a successful insert.
 ```
 
 See `examples/README.md` for complete instructions and troubleshooting.
