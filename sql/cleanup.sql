@@ -13,6 +13,7 @@
 -- For DROPPING: Child tasks must be dropped first (reverse dependency order)
 
 USE ROLE SYSADMIN;
+use database SNOWFLAKE_EXAMPLE;
 
 -- Check if RAW_INGESTION schema exists before trying to suspend tasks
 DECLARE
