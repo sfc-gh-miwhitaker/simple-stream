@@ -45,9 +45,42 @@ A complete streaming pipeline with:
 **What it does:**
 - Creates service account (`sfe_ingest_user`)
 - Grants pipe INSERT privileges
-- Guides you through key pair generation (`ssh-keygen` or OpenSSL)
+- Guides you through key pair generation (OpenSSL)
 - Registers public key with Snowflake
-- Outputs credentials for data provider
+
+### Step 4: Generate API Handoff Document
+
+```sql
+@sql/07_api_handoff.sql
+```
+
+**Time:** ~5 seconds  
+**What it does:**
+- Generates complete API documentation
+- Includes endpoint URL, authentication details, JSON schema
+- Provides curl example with your account details
+- Verifies credentials are properly configured
+- **Copy output and share with data provider** (along with `rsa_key.p8`)
+
+## Test Data Ingestion
+
+Working demo scripts are provided in `examples/`:
+
+**Unix/Mac:**
+```bash
+cd examples
+# Edit send_events.sh and update ACCOUNT_ID
+./send_events.sh
+```
+
+**Windows:**
+```cmd
+cd examples
+REM Edit send_events.bat and update ACCOUNT_ID
+send_events.bat
+```
+
+See `examples/README.md` for complete instructions and troubleshooting.
 
 ## What It Creates
 

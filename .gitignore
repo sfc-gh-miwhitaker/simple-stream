@@ -17,8 +17,10 @@ dist/
 # Secrets (NEVER commit these!)
 *.pem
 *.key
+*.p8
 private_key*
 public_key*
+rsa_key*
 *.crt
 
 # Internal development notes

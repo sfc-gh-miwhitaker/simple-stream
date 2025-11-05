@@ -35,47 +35,38 @@ GRANT USAGE ON SCHEMA SNOWFLAKE_EXAMPLE.RAW_INGESTION TO ROLE sfe_ingest_role;
 GRANT INSERT ON PIPE SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE TO ROLE sfe_ingest_role;
 
 -- ============================================================================
--- STEP 3: Generate RSA key pair (RECOMMENDED: ssh-keygen)
+-- STEP 3: Generate RSA key pair (requires OpenSSL)
 -- ============================================================================
 
--- OPTION 1: ssh-keygen (pre-installed on Mac/Linux/Windows 10+)
---
--- Run in your terminal:
---   ssh-keygen -t rsa -b 2048 -m PEM -f rsa_key -N ""
---   ssh-keygen -f rsa_key -e -m PEM > rsa_key.pub
---   mv rsa_key rsa_key.p8
---
--- This creates:
---   rsa_key.p8   (private key - give to data provider securely)
---   rsa_key.pub  (public key  - register with Snowflake below)
-
--- OPTION 2: OpenSSL (if ssh-keygen not available)
---
--- Mac/Linux:
+-- Mac/Linux (OpenSSL pre-installed):
 --   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
---   openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+--   openssl rsa -in rsa_key.p8 -pubout -outform DER | openssl base64 -A
 --
--- Windows: Install OpenSSL first
+-- Windows (install OpenSSL first):
 --   winget install OpenSSL.Light
---   (then run Mac/Linux commands above)
+--   (then run the Mac/Linux commands above)
+--
+-- Output:
+--   rsa_key.p8              (private key - give to data provider securely)
+--   Terminal output string  (public key - copy for Step 4 below)
 
 -- ============================================================================
 -- STEP 4: Register public key with Snowflake
 -- ============================================================================
 
--- Copy the contents of rsa_key.pub (without header/footer lines)
--- and paste into the command below:
+-- CRITICAL: The public key MUST be:
+--   1. A single line of base64 text (NO line breaks)
+--   2. WITHOUT the -----BEGIN/END PUBLIC KEY----- headers
+--   3. Copy the output from Step 3 exactly as shown
+--
+-- Paste the base64 string between the quotes below:
 
 USE ROLE ACCOUNTADMIN;
 
-ALTER USER sfe_ingest_user SET RSA_PUBLIC_KEY='
------PASTE YOUR PUBLIC KEY HERE-----
-';
+ALTER USER sfe_ingest_user SET RSA_PUBLIC_KEY='PASTE_BASE64_STRING_HERE';
 
--- Example:
--- ALTER USER sfe_ingest_user SET RSA_PUBLIC_KEY='
--- MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy...
--- ';
+-- Example (yours will be different):
+-- ALTER USER sfe_ingest_user SET RSA_PUBLIC_KEY='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy8Zo5dIjnhUp/hgRNXSMTwjU...';
 
 -- ============================================================================
 -- STEP 5: Verify setup
@@ -85,35 +76,11 @@ SHOW USERS LIKE 'sfe_ingest_user';
 SHOW GRANTS TO ROLE sfe_ingest_role;
 
 -- ============================================================================
--- STEP 6: Share credentials with data provider
--- ============================================================================
-
-SELECT '
-================================================================================
-CREDENTIALS FOR DATA PROVIDER
-================================================================================
-
-Username:     sfe_ingest_user
-Role:         sfe_ingest_role
-Private Key:  rsa_key.p8 (file you generated)
-
-IMPORTANT: 
-- Share rsa_key.p8 via secure channel (encrypted email, vault, etc.)
-- NEVER commit private key to version control
-- Private key file should be kept secure by data provider
-
-Account Information:
-  Account ID:   ' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '
-  Account URL:  ' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '.snowflakecomputing.com
-
-================================================================================
-' AS credentials;
-
--- ============================================================================
--- DONE
+-- DONE - Authentication configured
 -- ============================================================================
 -- 
--- Next: Run @sql/deploy.sql to get API configuration for data provider
+-- Next: Run @sql/07_api_handoff.sql to generate complete documentation
+--       for your data provider (API config + credentials)
 -- 
 -- ============================================================================
 

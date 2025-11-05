@@ -66,60 +66,12 @@ ORDER BY object;
 SHOW TASKS IN SCHEMA RAW_INGESTION;
 
 -- ============================================================================
--- DEPLOYMENT COMPLETE - API Integration Guide
+-- DEPLOYMENT COMPLETE
 -- ============================================================================
-
-SELECT '
-================================================================================
-SNOWPIPE STREAMING API - INTEGRATION GUIDE
-================================================================================
-
-ENDPOINT:
-https://' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE/insertRows
-
-CREDENTIALS:
-- Account: ' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '
-- User: sfe_ingest_user
-- Role: sfe_ingest_role
-- Private Key: rsa_key.p8 (provided separately)
-
-AUTHENTICATION:
-Generate JWT token using key pair authentication.
-See: https://docs.snowflake.com/en/developer-guide/sql-api/authenticating
-
---------------------------------------------------------------------------------
-CURL EXAMPLE
---------------------------------------------------------------------------------
-
-curl -X POST \\
-  -H "Authorization: Bearer <JWT_TOKEN>" \\
-  -H "Content-Type: application/json" \\
-  -d ''{"badge_id":"BADGE-001","user_id":"USR-001","zone_id":"ZONE-LOBBY-1","reader_id":"RDR-101","event_timestamp":"2024-11-04T10:30:00"}'' \\
-  https://' || CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() || '.snowflakecomputing.com/v1/data/pipes/SNOWFLAKE_EXAMPLE.RAW_INGESTION.SFE_BADGE_EVENTS_PIPE/insertRows
-
-Replace <JWT_TOKEN> with your generated token.
-
---------------------------------------------------------------------------------
-JSON FIELD REQUIREMENTS
---------------------------------------------------------------------------------
-
-REQUIRED:
-  badge_id           STRING      Unique badge identifier
-  user_id            STRING      User identifier
-  zone_id            STRING      Zone/location identifier
-  reader_id          STRING      RFID reader identifier
-  event_timestamp    STRING      ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
-
-OPTIONAL:
-  signal_strength    NUMBER      RSSI in dBm (e.g., -65.5)
-  direction          STRING      "ENTRY" or "EXIT"
-
---------------------------------------------------------------------------------
-DOCUMENTATION
---------------------------------------------------------------------------------
-
-Snowpipe Streaming: https://docs.snowflake.com/en/user-guide/data-load-snowpipe-streaming
-Key Pair Auth:      https://docs.snowflake.com/en/developer-guide/sql-api/authenticating
-
-================================================================================
-' AS api_handoff;
+-- 
+-- Next Steps:
+--   1. Run @sql/05_validate.sql to verify deployment
+--   2. Run @sql/06_configure_auth.sql to set up credentials
+--   3. Run @sql/07_api_handoff.sql to generate provider documentation
+-- 
+-- ============================================================================
